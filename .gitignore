@@ -1,0 +1,6 @@
+opentelemetry-collector/
+opentelemetry-collector-contrib/
+redhat-opentelemetry-collector/
+opentelemetry-operator/
+konflux-opentelemetry/
+openshift-docs/
