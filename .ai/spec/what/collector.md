@@ -1,6 +1,6 @@
 # Collector
 
-The OpenTelemetry Collector is a vendor-agnostic telemetry pipeline that receives, processes, and exports traces, metrics, and logs. The Red Hat distribution includes a curated subset of upstream components selected via a declarative manifest.
+The OpenTelemetry Collector is a vendor-agnostic telemetry pipeline that receives, processes, and exports traces, metrics, and logs. The Red Hat distribution includes a curated subset of upstream components selected via a declarative manifest. Each component has an explicit support level: GA, TP, or not supported (present in source but undocumented).
 
 ## Behavioral Rules
 
@@ -17,18 +17,110 @@ The OpenTelemetry Collector is a vendor-agnostic telemetry pipeline that receive
 6. The OpenTelemetry Collector Builder (OCB) generates Go source from `manifest.yaml` and compiles the binary.
 7. Generated source is committed to `_build/` so downstream Konflux builds can compile from pre-generated sources.
 
-### Included Components
+### Receivers
 
-8. The distro includes 14 receivers: otlp, jaeger, hostmetrics, prometheus, prometheusremotewrite, zipkin, kafka, filelog, journald, k8sevents, kubeletstats, k8scluster, k8sobjects, otlpjsonfile.
-9. The distro includes 12 exporters: debug, otlp, otlphttp, prometheus, prometheusremotewrite, kafka, awscloudwatchlogs, awsemf, awsxray, googlecloud, loadbalancing, file.
-10. The distro includes 14 processors: batch, memorylimiter, attributes, resource, span, k8sattributes, resourcedetection, filter, probabilisticsampler, cumulativetodelta, metricstarttime, groupbyattrs, transform, tailsampling.
-11. The distro includes 10 extensions: zpages, memorylimiter, jaegerremotesampling, healthcheck, pprof, oauth2clientauth, oidcauth, bearertokenauth, filestorage, googleclientauth.
-12. The distro includes 4 connectors: forward, spanmetrics, count, routing.
+The distro includes 14 receivers in source. Support levels per documentation:
+
+| Receiver | Support Level | Notes |
+|---|---|---|
+| OTLP | **GA** | |
+| Jaeger | **GA** | |
+| Host Metrics | **GA** | |
+| Prometheus | **GA** | |
+| Zipkin | **GA** | |
+| Kafka | **GA** | Promoted from TP in 3.10.0 |
+| Filelog | **GA** | |
+| Kubernetes Events | **GA** | Promoted from TP in 3.9.0 |
+| Kubernetes Objects | **GA** | Promoted from TP in 3.10.0 |
+| Kubelet Stats | **GA** | |
+| Prometheus Remote Write | **TP** | |
+| OTLP JSON File | **TP** | |
+| Journald | **TP** | |
+| Kubernetes Cluster | **TP** | |
+
+### Exporters
+
+The distro includes 12 exporters in source. Support levels per documentation:
+
+| Exporter | Support Level | Notes |
+|---|---|---|
+| OTLP gRPC | **GA** | Name `otlp` deprecated in 3.9.0 in favor of `otlp_grpc` |
+| OTLP HTTP | **GA** | Name `otlphttp` deprecated in 3.9.0 in favor of `otlp_http` |
+| Debug | **GA** | |
+| Prometheus | **GA** | Promoted from TP in 3.9.0 |
+| Prometheus Remote Write | **GA** | Promoted from TP in 3.9.0/3.10.0 |
+| Kafka | **GA** | |
+| Load Balancing | **TP** | |
+| AWS CloudWatch Logs | **TP** | |
+| AWS EMF | **TP** | |
+| AWS X-Ray | **TP** | |
+| File | **TP** | |
+| Google Cloud | **TP** | |
+
+### Processors
+
+The distro includes 14 processors in source. Support levels per documentation:
+
+| Processor | Support Level | Notes |
+|---|---|---|
+| Batch | **GA** | |
+| Memory Limiter | **GA** | |
+| Attributes | **GA** | |
+| Resource | **GA** | |
+| Kubernetes Attributes | **GA** | |
+| Filter | **GA** | Promoted from TP in 3.9.0 |
+| Transform | **GA** | Promoted from TP in 3.9.0 |
+| Tail Sampling | **GA** | Promoted from TP in 3.10.0 |
+| Probabilistic Sampling | **GA** | Promoted from TP in 3.10.0 |
+| Metric Start Time | **GA** | Introduced in 3.9.0 |
+| Resource Detection | **TP** | |
+| Span | **TP** | |
+| Cumulative-to-Delta | **TP** | |
+| Group-by-Attributes | **TP** | |
+
+### Connectors
+
+The distro includes 4 connectors in source. Support levels per documentation:
+
+| Connector | Support Level | Notes |
+|---|---|---|
+| Span Metrics | **GA** | |
+| Count | **TP** | |
+| Routing | **TP** | |
+| Forward | **TP** | |
+
+### Extensions
+
+The distro includes 10 extensions in source. Support levels per documentation:
+
+| Extension | Support Level | Notes |
+|---|---|---|
+| Bearer Token Auth | **GA** | |
+| Google Client Auth | **GA** | |
+| OAuth2 Client | **TP** | |
+| File Storage | **TP** | |
+| OIDC Auth | **TP** | |
+| Jaeger Remote Sampling | **TP** | |
+| Performance Profiler (pprof) | **TP** | |
+| Health Check | **TP** | |
+| zPages | **TP** | |
+| Memory Limiter (extension) | **Not supported** | Present in source but not documented |
 
 ### Configuration
 
-13. In the v1beta1 API, collector config is a structured object with typed fields for receivers, exporters, processors, connectors, extensions, and service.
-14. In the deprecated v1alpha1 API, collector config is a raw YAML string.
+8. In the v1beta1 API, collector config is a structured object with typed fields for receivers, exporters, processors, connectors, extensions, and service.
+9. In the deprecated v1alpha1 API, collector config is a raw YAML string.
+
+## Summary
+
+| Category | GA | TP | Not Supported |
+|---|---|---|---|
+| Receivers | 10 | 4 | 0 |
+| Exporters | 6 | 6 | 0 |
+| Processors | 10 | 4 | 0 |
+| Connectors | 1 | 3 | 0 |
+| Extensions | 2 | 7 | 1 |
+| **Total** | **29** | **24** | **1** |
 
 ## Configuration Surface
 
@@ -47,3 +139,4 @@ The OpenTelemetry Collector is a vendor-agnostic telemetry pipeline that receive
 1. Adding or removing a component from the Red Hat distro requires updating `manifest.yaml` in `redhat-opentelemetry-collector` and regenerating `_build/`.
 2. Each component has independent stability levels per signal (e.g., a receiver can be Stable for traces but Alpha for metrics).
 3. The collector binary exposes OTLP gRPC on port 4317 by default.
+4. The OpenCensus Receiver was removed in version 3.9.0.

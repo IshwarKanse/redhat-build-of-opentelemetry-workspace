@@ -2,22 +2,24 @@
 
 The Target Allocator distributes Prometheus scrape targets across OpenTelemetry Collector instances. It can be embedded in an OpenTelemetryCollector CR or managed as a standalone CRD.
 
+The Target Allocator is **GA** (promoted from TP in 3.9.0).
+
 ## Behavioral Rules
 
 ### Allocation Strategies
 
-1. **consistent-hashing** (default): distributes targets using consistent hashing for stable assignment across collector instances.
-2. **least-weighted**: assigns targets to the collector instance with the fewest current targets.
-3. **per-node**: assigns targets to the collector instance running on the same node as the target.
+1. **GA**: **consistent-hashing** (default): distributes targets using consistent hashing for stable assignment across collector instances.
+2. **GA**: **least-weighted**: assigns targets to the collector instance with the fewest current targets.
+3. **GA**: **per-node**: assigns targets to the collector instance running on the same node as the target.
 
 ### Filter Strategy
 
-4. **relabel-config** (default): applies Prometheus relabel_config rules to filter targets before allocation.
+4. **GA**: **relabel-config** (default): applies Prometheus relabel_config rules to filter targets before allocation.
 5. An empty filter strategy disables filtering.
 
 ### Prometheus CRD Integration
 
-6. When `prometheusCR.enabled` is true, the target allocator discovers scrape targets from Prometheus Operator CRDs: ServiceMonitor, PodMonitor, Probe, and ScrapeConfig.
+6. **GA**: When `prometheusCR.enabled` is true, the target allocator discovers scrape targets from Prometheus Operator CRDs: ServiceMonitor, PodMonitor, Probe, and ScrapeConfig.
 7. Namespace selectors and label selectors can be configured independently for each Prometheus CRD type.
 8. `scrapeInterval` defaults to 30s; `evaluationInterval` defaults to 30s.
 
@@ -33,7 +35,7 @@ The Target Allocator distributes Prometheus scrape targets across OpenTelemetry 
 
 ### Standalone CRD
 
-13. The standalone TargetAllocator CRD (v1alpha1) allows managing target allocation independently of an OpenTelemetryCollector CR.
+13. **GA**: The standalone TargetAllocator CRD (v1alpha1) allows managing target allocation independently of an OpenTelemetryCollector CR.
 14. It supports `globalConfig` and `scrapeConfigs` fields for direct Prometheus configuration.
 
 ## Configuration Surface

@@ -1,66 +1,77 @@
 # Operator
 
-The OpenTelemetry Operator is a Kubernetes operator that manages the lifecycle of OpenTelemetry Collector instances, auto-instrumentation injection, target allocation, and OpAMP bridge on OpenShift. It defines five CRDs.
+The OpenTelemetry Operator is a Kubernetes operator that manages the lifecycle of OpenTelemetry Collector instances, auto-instrumentation injection, target allocation, and OpAMP bridge on OpenShift. It defines five CRDs, but not all are documented or supported.
 
 ## Behavioral Rules
 
 ### CRDs
 
-1. **OpenTelemetryCollector** (v1beta1, storage version) manages collector instances. Short names: `otelcol`, `otelcols`.
-2. **Instrumentation** (v1alpha1) configures auto-instrumentation injection. Short names: `otelinst`, `otelinsts`. See `what/auto-instrumentation.md`.
-3. **TargetAllocator** (v1alpha1, standalone) manages Prometheus target distribution. See `what/target-allocator.md`.
-4. **OpAMPBridge** (v1alpha1) provides remote configuration management via Open Agent Management Protocol.
-5. **ClusterObservability** (v1alpha1, cluster-scoped) provides simplified cluster-wide observability with a single OTLP HTTP endpoint.
+| CRD | API Version | Support Level | Notes |
+|---|---|---|---|
+| OpenTelemetryCollector | v1beta1 (storage version) | **GA** | Short names: `otelcol`, `otelcols` |
+| Instrumentation | v1alpha1 | **TP** | See `what/auto-instrumentation.md`. Short names: `otelinst`, `otelinsts` |
+| TargetAllocator | v1alpha1 (standalone) | **GA** | See `what/target-allocator.md`. Promoted from TP in 3.9.0 |
+| OpAMPBridge | v1alpha1 | **Not supported** | Present in source, not documented |
+| ClusterObservability | v1alpha1, cluster-scoped | **Not supported** | Present in source, not documented |
 
 ### Collector Modes
 
-6. Deployment mode (default): standard Kubernetes Deployment with configurable replicas.
-7. DaemonSet mode: one collector pod per node.
-8. StatefulSet mode: supports persistent storage via VolumeClaimTemplates.
-9. Sidecar mode: injected into application pods. Sidecar mode prohibits tolerations, priorityClassName, affinity, and additionalContainers.
+All four collector modes are **GA**:
+
+1. Deployment mode (default): standard Kubernetes Deployment with configurable replicas.
+2. DaemonSet mode: one collector pod per node.
+3. StatefulSet mode: supports persistent storage via VolumeClaimTemplates.
+4. Sidecar mode: injected into application pods. Sidecar mode prohibits tolerations, priorityClassName, affinity, and additionalContainers.
 
 ### Management State
 
-10. When `managementState` is `managed` (default), the operator reconciles the CR and manages all child resources.
-11. When `managementState` is `unmanaged`, the operator stops reconciling — the user controls child resources directly.
+5. **GA**: When `managementState` is `managed` (default), the operator reconciles the CR and manages all child resources.
+6. **GA**: When `managementState` is `unmanaged`, the operator stops reconciling — the user controls child resources directly.
 
 ### Autoscaling
 
-12. HPA-based autoscaling is supported with CPU/memory utilization targets and custom metrics.
-13. MinReplicas, MaxReplicas, and scaling behavior are configurable.
+7. **GA**: HPA-based autoscaling is supported with CPU/memory utilization targets and custom metrics.
+8. MinReplicas, MaxReplicas, and scaling behavior are configurable.
 
 ### Networking
 
-14. Ingress, HTTPRoute, and NetworkPolicy resources can be configured per collector instance.
+9. **GA**: Ingress, HTTPRoute, and NetworkPolicy resources can be configured per collector instance.
 
 ### API Versioning
 
-15. v1beta1 is the stable storage version for OpenTelemetryCollector.
-16. v1alpha1 OpenTelemetryCollector is deprecated; its config field is a raw string, not structured.
-17. All other CRDs are v1alpha1.
+10. v1beta1 is the stable storage version for OpenTelemetryCollector.
+11. v1alpha1 OpenTelemetryCollector is deprecated; its config field is a raw string, not structured.
 
-### OpAMP Bridge
+### Operator Configuration
 
-18. OpAMPBridge is limited to a single replica.
-19. It connects to an OpAMP server endpoint and manages collector configurations based on declared capabilities.
+12. **GA**: The operator supports configuration via environment variables:
+    - `OPENSHIFT_CREATE_DASHBOARD`: controls Grafana dashboard creation.
+    - `ENABLE_CR_METRICS`: enables custom resource metrics.
+    - `CREATE_SM_OPERATOR_METRICS`: creates ServiceMonitor for operator metrics.
+    - `FEATURE_GATES`: enables/disables feature gates.
+13. **GA**: The operator automatically creates RBAC resources required by collector components.
 
-### ClusterObservability
+### TLS
 
-20. ClusterObservability is cluster-scoped (not namespaced).
-21. It provides a single unified OTLP HTTP endpoint with optional per-signal endpoint overrides (traces, metrics, logs, profiles).
+14. **GA**: The operator adheres to cluster TLS security profiles (introduced in 3.10.0).
+
+### Features Not Supported
+
+15. **Not supported**: OpAMPBridge — present in source but not documented. It connects to an OpAMP server endpoint and manages collector configurations.
+16. **Not supported**: ClusterObservability CRD — present in source but not documented. Provides a simplified cluster-wide OTLP endpoint.
 
 ## Configuration Surface
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| spec.mode | Enum | `deployment` | Collector scheduling mode |
-| spec.replicas | int | 1 | Number of collector replicas |
-| spec.managementState | Enum | `managed` | Whether operator reconciles this CR |
-| spec.config | Structured | — | Collector pipeline configuration |
-| spec.targetAllocator.enabled | bool | false | Enable embedded target allocator |
-| spec.autoscaler | Object | — | HPA configuration |
-| spec.ingress | Object | — | Ingress configuration |
-| spec.configVersions | int | 3 | Number of config versions to retain |
+| Field | Type | Default | Description | Support |
+|---|---|---|---|---|
+| spec.mode | Enum | `deployment` | Collector scheduling mode | **GA** |
+| spec.replicas | int | 1 | Number of collector replicas | **GA** |
+| spec.managementState | Enum | `managed` | Whether operator reconciles this CR | **GA** |
+| spec.config | Structured | — | Collector pipeline configuration | **GA** |
+| spec.targetAllocator.enabled | bool | false | Enable embedded target allocator | **GA** |
+| spec.autoscaler | Object | — | HPA configuration | **GA** |
+| spec.ingress | Object | — | Ingress configuration | **GA** |
+| spec.configVersions | int | 3 | Number of config versions to retain | **GA** |
 
 ## Constraints
 

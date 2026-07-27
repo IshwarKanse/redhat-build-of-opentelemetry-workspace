@@ -2,47 +2,57 @@
 
 The Instrumentation CRD configures automatic injection of OpenTelemetry instrumentation into application pods. The operator injects init containers (or a sidecar for Go) that add language-specific instrumentation libraries without code changes.
 
+The entire auto-instrumentation feature is **TP (Technology Preview)**. The operator only supports the injection mechanism — it does not support the instrumentation libraries or upstream images themselves.
+
 ## Behavioral Rules
 
 ### Supported Languages
 
-1. Seven languages are supported: Java, Node.js, Python, .NET, Go, Apache HTTPD, and Nginx.
-2. Java, Node.js, Python, .NET, Apache HTTPD, and Nginx use init-container injection.
-3. Go uses sidecar injection with eBPF/uprobes, requiring a privileged security context.
+All languages are **TP**:
+
+| Language | Injection Method | Support Level | Notes |
+|---|---|---|---|
+| Java | Init container | **TP** | By default injects unsupported upstream instrumentation libraries |
+| Node.js | Init container | **TP** | By default injects unsupported upstream instrumentation libraries |
+| Python | Init container | **TP** | By default injects unsupported upstream instrumentation libraries |
+| .NET | Init container | **TP** | By default injects unsupported upstream instrumentation libraries |
+| Go | Sidecar (eBPF/uprobes) | **TP** | Requires privileged security context. By default injects unsupported upstream instrumentation libraries |
+| Apache HTTPD | Init container | **TP** | |
+| Nginx | Init container | **TP** | |
 
 ### Injection Mechanism
 
-4. Instrumentation is triggered by pod annotations (e.g., `instrumentation.opentelemetry.io/inject-java: "true"`).
-5. Each language has its own container image configured in the Instrumentation CR.
-6. VolumeClaimTemplates can be configured per language for persistent instrumentation storage.
+1. **TP**: Instrumentation is triggered by pod annotations (e.g., `instrumentation.opentelemetry.io/inject-java: "true"`).
+2. Each language has its own container image configured in the Instrumentation CR.
+3. VolumeClaimTemplates can be configured per language for persistent instrumentation storage.
 
 ### Configuration Precedence
 
-7. Environment variable precedence (highest to lowest): original container env → language-specific env → common env → Instrumentation spec fields (exporter, resource, sampler, propagators).
+4. Environment variable precedence (highest to lowest): original container env → language-specific env → common env → Instrumentation spec fields (exporter, resource, sampler, propagators).
 
 ### Propagators
 
-8. Supported propagators: tracecontext, baggage, b3, b3multi, jaeger, xray, ottrace, none.
+5. Supported propagators: tracecontext, baggage, b3, b3multi, jaeger, xray, ottrace, none.
 
 ### Sampler
 
-9. A sampler type and argument can be configured to control trace sampling at the SDK level.
+6. A sampler type and argument can be configured to control trace sampling at the SDK level.
 
 ### Exporter
 
-10. The exporter endpoint defines where instrumented applications send telemetry.
-11. TLS can be configured via Secrets and ConfigMaps for the exporter connection.
+7. The exporter endpoint defines where instrumented applications send telemetry.
+8. TLS can be configured via Secrets and ConfigMaps for the exporter connection.
 
 ### Resource Attributes
 
-12. Custom resource attributes can be set via the `resource` field.
-13. `addK8sUIDAttributes` adds Kubernetes UID-based resource attributes when true.
-14. `useLabelsForResourceAttributes` uses pod labels to populate resource attributes when enabled.
+9. Custom resource attributes can be set via the `resource` field.
+10. `addK8sUIDAttributes` adds Kubernetes UID-based resource attributes when true.
+11. `useLabelsForResourceAttributes` uses pod labels to populate resource attributes when enabled.
 
 ### Security
 
-15. `initContainerSecurityContext` applies to all init-container-based languages (excludes Go).
-16. Go instrumentation requires its own SecurityContext with elevated privileges for eBPF.
+12. `initContainerSecurityContext` applies to all init-container-based languages (excludes Go).
+13. Go instrumentation requires its own SecurityContext with elevated privileges for eBPF.
 
 ## Configuration Surface
 
@@ -65,3 +75,4 @@ The Instrumentation CRD configures automatic injection of OpenTelemetry instrume
 1. Go auto-instrumentation is the only language that runs as a sidecar rather than an init container.
 2. Apache HTTPD supports version 2.4 and 2.2 with a configurable `configPath`.
 3. Nginx requires a `configFile` path to the Nginx configuration.
+4. The operator supports only the injection mechanism. The instrumentation libraries themselves and upstream images are not supported by Red Hat.

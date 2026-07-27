@@ -45,6 +45,7 @@ AI agents. Content is optimized for precision and machine consumption.
 ## Conventions
 
 - **Rule numbering:** behavioral rules are numbered sequentially within each what/ file.
+- **Support levels:** features are marked **GA** (Generally Available — fully supported with production SLAs), **TP** (Technology Preview — documented but not production-supported), or **Not supported** (present in source code but absent from documentation). Only documented features are supported.
 - **Planned changes:** unimplemented behavior is marked with `[PLANNED]` or `[PLANNED: TRACING-XXXX]` inline next to the rule it affects.
 - **Constraints:** component-specific and cross-cutting constraints go in the relevant what/ file's Constraints section, co-located with behavioral rules. Development conventions go in CLAUDE.md.
 - **Authority:** what/ specs are authoritative for behavior. how/ specs are authoritative for implementation. When they conflict, what/ wins.
