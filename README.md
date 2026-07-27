@@ -53,6 +53,10 @@ Use the `/spec-first:init` was used to create initial set of spec files. To inst
 /plugin install spec-first@spec-first-marketplace
 ```
 
+Example prompt: 
+> /spec-first:init create the specs. Document which features are supported and which not. The supported features are the ones that are documented in the docs. These features are either generally available (GA) or tech-preview (TP). If a feature is in the source code, but missing in docs, it is
+not supported.
+
 ## Conventions
 
 - **Jira**: Project key `TRACING` on `redhat.atlassian.net`
