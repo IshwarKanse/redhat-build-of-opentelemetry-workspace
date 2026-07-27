@@ -1,7 +1,7 @@
 # Red Hat build of OpenTelemetry Workspace
 
 ## Project Overview
-Red Hat build of OpenTelemetry is an OpenTelemtry distribution for for OpenShift. This workspace contains all repositories that make up the product. Each repo has its own `AGENTS.md` with repo-specific conventions — read it before working in that repo.
+Red Hat build of OpenTelemetry is an OpenTelemtry distribution for OpenShift. This workspace contains all repositories that make up the product. Each repo has its own `AGENTS.md` with repo-specific conventions — read it before working in that repo.
 
 ## Repositories
 
@@ -43,12 +43,12 @@ After brainstorming writes and commits a spec change, **auto-push and open a PR*
     - Scope creep beyond what was discussed in brainstorming
     - If issues are found: fix them, amend the commit, and re-review
 3. Detect the fork remote: get the authenticated GitHub username (`gh api user -q .login`), then find the remote whose push URL contains that username (e.g. `git remote -v | grep push | grep <username>`). Extract `<fork-remote>` name and `<fork-user>` from its URL. If no matching remote is found, stop and tell the user.
-4. Create a branch: `spec/<OLS-XXXX>-<topic>` (use `OLS-0000` when there is no Jira ticket)
+4. Create a branch: `spec/<TRACING-XXXX>-<topic>` (use `TRACING-0000` when there is no Jira ticket)
 5. Push: `git push <fork-remote> spec/<branch>`
 6. Open the PR with the `spec-only` label:
    ```
    gh pr create --repo openshift/ols --head <fork-user>:<branch> --base main \
-     --title "OLS-XXXX <summary>" --body "Spec-only change, pre-push reviewed." \
+     --title "TRACING-XXXX <summary>" --body "Spec-only change, pre-push reviewed." \
      --label kind/design
    ```
 7. Tell the user the PR is ready for review and provide the URL.
