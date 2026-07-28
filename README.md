@@ -40,14 +40,14 @@ done
 
 All specifications live in `.ai/spec/`. Start with [`.ai/spec/README.md`](.ai/spec/README.md) for the product overview and reading guide. Use [`.ai/spec/how/repo-map.md`](.ai/spec/how/repo-map.md) to find which repo and spec file to update for a given concern.
 
-1. New spec files should be created with `/superpowers:brainstorming` [skill](https://github.com/obra/superpowers/tree/main) skill.
+1. Create spec: a new spec files should be created with `/superpowers:brainstorming` [skill](https://github.com/obra/superpowers/tree/main).
    ```
    > /superpowers:brainstorming Create or update specs for https://redhat.atlassian.net/browse/TRACING-6499. Also consider https://redhat.atlassian.net/browse/OBSDA-1454 which is the parent
    ticket.
    ```
-As an input use product requirements or design ideas. The output is a set of spec files in `.ai/spec/` that can be used to implement the feature.
-2. After the spec files are created, in the same session run `/superpowers:brainstorming` skill again to create Jira tickets for the spec files.
-3. For implementation, use `/superpowers:implementation` skill with the Jira ticket as an input. After the implementation is done ask agent to update the spec files based on the implementation. 
+   As an input use product requirements or design ideas. The output should be a set of spec files in `.ai/spec/`.
+1. Create Jira tickets: in the same session run `/make-jira-from-spec` skill to create Jira tickets from the spec files.
+1. Implementation: use `/superpowers:brainstorming` skill with the Jira ticket as an input. After the implementation is done ask agent to update the spec files based on the implementation. 
 
 ### Create initial spec files
 
