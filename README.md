@@ -49,7 +49,7 @@ All specifications live in `.ai/spec/`. Start with [`.ai/spec/README.md`](.ai/sp
 1. Create spec: a new spec files should be created with `/superpowers:brainstorming` [skill](https://github.com/obra/superpowers/tree/main).
    ```
    > /superpowers:brainstorming create or update specs for https://redhat.atlassian.net/browse/TRACING-6499. Also consider https://redhat.atlassian.net/browse/OBSDA-1454 which is the parent
-   ticket.
+   ticket. Do not commit and do not proceed with implementation.
    ```
    As an input use product requirements or design ideas. The output should be a set of spec files in `.ai/spec/`.
 1. Create Jira tickets: in the same session run `/make-jira-from-spec` skill to create Jira tickets from the spec files.
