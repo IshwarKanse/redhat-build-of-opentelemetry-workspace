@@ -164,9 +164,12 @@ processors:
 
 - Runs early in the processor chain, before any span-modifying processors.
 - Strips the three signing attributes, re-serializes using the same canonical format, verifies the signature.
-- `flag`: sets hardcoded attribute `otel.signing.valid` (boolean, `true` or `false`) and passes the span through.
-- `drop`: drops invalid spans silently (logged at debug level).
-- `allow` (for `on_missing`): passes unsigned spans through without flagging, for mixed environments during rollout.
+- `on_invalid: flag`: sets `otel.signing.valid=false` and passes the span through.
+- `on_invalid: drop`: drops invalid spans silently (logged at debug level).
+- `on_missing: flag`: sets `otel.signing.valid=false` (unsigned spans are treated as invalid for flagging purposes) and passes the span through.
+- `on_missing: drop`: drops unsigned spans silently (logged at debug level).
+- `on_missing: allow`: passes unsigned spans through without any flag attribute, for mixed environments during rollout.
+- On successful verification: sets `otel.signing.valid=true`.
 - Signals supported: traces only.
 
 ## Testing
