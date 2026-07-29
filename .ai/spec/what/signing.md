@@ -4,6 +4,29 @@ Non-repudiation signing provides tamper detection and authenticity guarantees fo
 
 The entire signing feature is **[PLANNED: TRACING-6499] TP (Technology Preview)**.
 
+## Architecture
+
+```
++---------------------------+        OTLP        +------------------------------+
+|   Customer Go App         | ------------------> |   Red Hat OTel Collector     |
+|                           |                     |                              |
+|  OTel SDK                 |                     |  Receivers                   |
+|    +- SigningProcessor    |                     |    +- OTLP                   |
+|    |   (SpanProcessor +   |                     |  Processors                  |
+|    |    exporter wrapper)  |                     |    +- signaturevalidation    |
+|    |                      |                     |         |                    |
+|    +- Signing backends    |                     |         +- on valid: pass    |
+|         +- HMAC-SHA256    |                     |         +- on invalid: drop/ |
+|         +- ECDSA P-256    |                     |              flag            |
+|         +- Sigstore       |                     |         +- verify backends   |
+|                           |                     |  Exporters                   |
+|  Span attributes:         |                     |    +- OTLP -> Tempo          |
+|   otel.signing.signature  |                     +------------------------------+
+|   otel.signing.algorithm  |
+|   otel.signing.key_id     |
++---------------------------+
+```
+
 ## Behavioral Rules
 
 ### SDK Signing Component
@@ -16,6 +39,19 @@ The entire signing feature is **[PLANNED: TRACING-6499] TP (Technology Preview)*
 ### Signing Backends
 
 5. Three backends are supported behind a common `Signer`/`Verifier` interface:
+
+```go
+type Signer interface {
+    Sign(data []byte) ([]byte, error)
+    Algorithm() string
+    KeyID() string
+}
+
+type Verifier interface {
+    Verify(data []byte, signature []byte) (bool, error)
+    Algorithm() string
+}
+```
 
 | Backend | SDK (sign) | Collector (verify) | Key Source | FIPS Compatible |
 |---|---|---|---|---|
@@ -49,6 +85,21 @@ The entire signing feature is **[PLANNED: TRACING-6499] TP (Technology Preview)*
 15. On successful verification, the processor sets `otel.signing.valid=true`.
 16. Signals supported: traces only.
 
+### SDK Usage
+
+```go
+import "github.com/os-observability/redhat-opentelemetry-collector/pkg/signing"
+
+signer, err := signing.NewHMACSigner(signing.HMACConfig{
+    KeyPath: "/etc/otel/keys/hmac.key",
+})
+
+tp := sdktrace.NewTracerProvider(
+    sdktrace.WithSpanProcessor(signing.NewSigningProcessor(signer)),
+    sdktrace.WithBatcher(otlpExporter),
+)
+```
+
 ### Exporter API Alternative
 
 17. A pure `SpanExporter` wrapping approach could sign at the ResourceSpans level instead of per-span, reducing signing operations. This is documented but not implemented due to trade-offs: it requires reimplementing or forking the OTLP exporter (connection management, retry, TLS, compression), locks signing to OTLP only, and creates ongoing maintenance burden. If per-span signing proves to be a performance bottleneck, this alternative should be revisited.
@@ -63,6 +114,32 @@ The entire signing feature is **[PLANNED: TRACING-6499] TP (Technology Preview)*
 | KeyPath | string | — | Path to signing key file |
 
 ### Collector Processor
+
+```yaml
+processors:
+  signature_validation:
+    verification:
+      # Backends listed in precedence order.
+      # The processor matches the span's otel.signing.algorithm
+      # attribute against each backend in order. First match wins.
+      # If no backend matches, the span is treated as unsigned
+      # (on_missing applies).
+      backends:
+        - algorithm: hmac-sha256
+          key_source: file
+          key_path: /etc/otel/keys/hmac.key
+        - algorithm: ecdsa-p256
+          key_source: file
+          key_path: /etc/otel/keys/verify.pem
+        - algorithm: sigstore
+          rekor_url: https://rekor.sigstore.dev
+
+    # What to do with unsigned spans (no signature attributes present)
+    on_missing: allow | drop | flag
+
+    # What to do when signature verification fails
+    on_invalid: drop | flag
+```
 
 | Field | Type | Default | Description |
 |---|---|---|---|
