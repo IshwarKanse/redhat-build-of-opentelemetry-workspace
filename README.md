@@ -12,6 +12,8 @@ Cross-repo workspace for Red Hat build of OpenTelemetry — shared specs, routin
 | [opentelemetry-operator](https://github.com/open-telemetry/opentelemetry-operator)                                | Kubernetes operator                                                   |
 | [konflux-opentelemetry](https://github.com/os-observability/konflux-opentelemetry)                                | Downstream productization repository, contains all product components |
 | [redhat-build-of-opentelemetery-docs](https://github.com/openshift/openshift-docs/tree/standalone-otel-docs-main) | Documentation for the Red Hat build of OpenTelemetry  |
+| [distributed-tracing-console-plugin](https://github.com/openshift/distributed-tracing-console-plugin)           | OpenShift console plugin for distributed tracing                     |
+| [logging-console-plugin](https://github.com/openshift/logging-view-plugin) | OpenShift console plugin for logging view |
 
 ## Setup
 
@@ -24,6 +26,9 @@ done
 for repo in redhat-opentelemetry-collector konflux-opentelemetry; do
   git clone git@github.com:os-observability/$repo.git
 done
+for repo in distributed-tracing-console-plugin logging-view-plugin; do
+  git clone git@github.com:openshift/$repo.git
+done
 git clone --single-branch --branch standalone-otel-docs-main git@github.com:openshift/openshift-docs.git
 ```
 
@@ -31,7 +36,8 @@ Pull all repos:
 
 ```bash
 for d in opentelemetry-collector opentelemetry-collector-contrib opentelemetry-operator \
-  redhat-opentelemetry-collector konflux-opentelemetry openshift-docs; do
+  redhat-opentelemetry-collector konflux-opentelemetry \
+  distributed-tracing-console-plugin logging-view-plugin openshift-docs; do
   [ -d "$d/.git" ] && echo "=== $d ===" && git -C "$d" pull --ff-only
 done
 ```
