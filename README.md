@@ -51,7 +51,7 @@ All specifications live in `.ai/spec/`. Start with [`.ai/spec/README.md`](.ai/sp
 
 ### Create initial spec files
 
-Use the `/spec-first:init` was used to create initial set of spec files. To install the `spec-first` plugin, run:
+The `/spec-first:init` [skill](https://github.com/joshuawilson/spec-first) was used to create initial set of spec files. To install the `spec-first` plugin, run:
 ```bash
 /plugin marketplace add joshuawilson/spec-first
 /plugin install spec-first@spec-first-marketplace
