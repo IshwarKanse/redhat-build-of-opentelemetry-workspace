@@ -73,4 +73,4 @@ Only features documented in the product documentation are considered supported. 
 
 | Ticket | Summary |
 |---|---|
-| [PLANNED: TRACING-6499] | Non-repudiation signing in traces — Go SDK signing component + collector validation processor (TP). See `docs/superpowers/specs/2026-07-29-non-repudiation-signing-design.md`. |
+| [PLANNED: TRACING-6499] | Non-repudiation signing in traces — Go SDK signing component + collector validation processor (TP). See `what/signing.md`. |

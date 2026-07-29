@@ -138,7 +138,7 @@ The distro includes 10 extensions in source. Support levels per documentation:
 
 | Component | Type | Support Level | Ticket |
 |---|---|---|---|
-| Signature Validation | Processor | **[PLANNED: TRACING-6499]** TP | Validates non-repudiation signatures on incoming spans. Pluggable backends: HMAC-SHA256, ECDSA P-256, Sigstore. Configurable failure action (drop/flag). See `docs/superpowers/specs/2026-07-29-non-repudiation-signing-design.md`. |
+| Signature Validation | Processor | **[PLANNED: TRACING-6499]** TP | Validates non-repudiation signatures on incoming spans. See `what/signing.md`. |
 
 ## Constraints
 

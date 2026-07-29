@@ -23,6 +23,7 @@ Lookup table: concern → repo(s) → spec file(s). Use this to find where to go
 | Component selection (which contrib components to include) | redhat-opentelemetry-collector | `what/collector.md`, `how/build-pipeline.md` |
 | OCB build and `_build/` generation | redhat-opentelemetry-collector | `how/build-pipeline.md` |
 | RPM packaging | redhat-opentelemetry-collector | `what/productization.md` |
+| Non-repudiation signing (SDK + collector processor) | redhat-opentelemetry-collector | `what/signing.md` |
 
 ## Operator
 
