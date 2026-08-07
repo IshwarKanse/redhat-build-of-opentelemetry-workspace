@@ -5,16 +5,9 @@ Red Hat build of OpenTelemetry is an OpenTelemtry distribution for OpenShift. Th
 
 ## Repositories
 
-| Repo | Purpose |
-|---|---|
-| [opentelemetry-collector](https://github.com/open-telemetry/opentelemetry-collector) | Core collector |
-| [opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib) | Collector contrib with all components |
-| [redhat-opentelemetry-collector](https://github.com/os-observability/redhat-opentelemetry-collector) | Red Hat distribution of the collector |
-| [opentelemetry-operator](https://github.com/open-telemetry/opentelemetry-operator) | Kubernetes operator |
-| [konflux-opentelemetry](https://github.com/os-observability/konflux-opentelemetry) | Downstream productization repository, contains all product components |
-| [redhat-build-of-opentelemetery-docs](https://github.com/openshift/openshift-docs/tree/standalone-otel-docs-main) | Documentation for the Red Hat build of OpenTelemetry |
-| [distributed-tracing-console-plugin](https://github.com/openshift/distributed-tracing-console-plugin) | OpenShift console plugin for distributed tracing |
-| [logging-console-plugin](https://github.com/openshift/logging-view-plugin) | OpenShift console plugin for logging view |
+The repositories are defined in:
+* load [README.md](./README.md)
+* load @README.md
 
 ## Cross-Repo Conventions
 
