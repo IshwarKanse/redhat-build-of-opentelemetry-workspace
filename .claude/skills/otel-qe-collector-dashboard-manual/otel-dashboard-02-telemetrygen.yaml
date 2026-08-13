@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-gen
+  namespace: otel-test
+  labels:
+    app: telemetry-gen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telemetry-gen
+  template:
+    metadata:
+      labels:
+        app: telemetry-gen
+    spec:
+      containers:
+        - name: traces
+          image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:latest
+          args:
+            - traces
+            - --otlp-endpoint=simplest-collector.otel-test.svc.cluster.local:4317
+            - --otlp-insecure
+            - --rate=1
+            - --duration=inf
+            - --service=telemetry-gen
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
+        - name: metrics
+          image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:latest
+          args:
+            - metrics
+            - --otlp-endpoint=simplest-collector.otel-test.svc.cluster.local:4317
+            - --otlp-insecure
+            - --rate=1
+            - --duration=inf
+            - --service=telemetry-gen
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
+        - name: logs
+          image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:latest
+          args:
+            - logs
+            - --otlp-endpoint=simplest-collector.otel-test.svc.cluster.local:4317
+            - --otlp-insecure
+            - --rate=1
+            - --duration=inf
+            - --service=telemetry-gen
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
