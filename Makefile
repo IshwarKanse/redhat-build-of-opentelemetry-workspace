@@ -15,7 +15,7 @@ REPOS = \
 
 REPO_DIRS = $(foreach r,$(REPOS),$(notdir $(r)))
 
-# Clone all workspace repos into this directory (HTTPS — works in both local and CI)
+# Clone all workspace repos into this directory
 # konflux-opentelemetry: --recurse-submodules to populate operator and collector submodules
 # openshift-docs: --single-branch --branch to clone the standalone otel docs branch
 clone-repos:
@@ -27,7 +27,7 @@ clone-repos:
 	    flags=""; \
 	    if [ "$$name" = "konflux-opentelemetry" ]; then flags="--recurse-submodules"; fi; \
 	    if [ "$$name" = "openshift-docs" ]; then flags="--single-branch --branch standalone-otel-docs-main"; fi; \
-	    git clone $$flags https://github.com/$$repo.git; \
+	    git clone $$flags git@github.com:$$repo.git; \
 	  fi; \
 	done
 
