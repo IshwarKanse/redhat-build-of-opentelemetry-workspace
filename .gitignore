@@ -1,3 +1,5 @@
+.vscode/
+
 opentelemetry-collector/
 opentelemetry-collector-contrib/
 redhat-opentelemetry-collector/
