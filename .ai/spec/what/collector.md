@@ -19,7 +19,7 @@ The OpenTelemetry Collector is a vendor-agnostic telemetry pipeline that receive
 
 ### Receivers
 
-The distro includes 14 receivers in source. Support levels per documentation:
+The distro includes 15 receivers in source. Support levels per documentation:
 
 | Receiver | Support Level | Notes |
 |---|---|---|
@@ -37,6 +37,7 @@ The distro includes 14 receivers in source. Support levels per documentation:
 | OTLP JSON File | **TP** | |
 | Journald | **TP** | |
 | Kubernetes Cluster | **TP** | |
+| Webhook Event | **TP** | Added in 3.11.0. Beta upstream for logs. |
 
 ### Exporters
 
@@ -115,12 +116,12 @@ The distro includes 10 extensions in source. Support levels per documentation:
 
 | Category | GA | TP | Not Supported |
 |---|---|---|---|
-| Receivers | 10 | 4 | 0 |
+| Receivers | 10 | 5 | 0 |
 | Exporters | 6 | 6 | 0 |
 | Processors | 10 | 4 | 0 |
 | Connectors | 1 | 3 | 0 |
 | Extensions | 2 | 7 | 1 |
-| **Total** | **29** | **24** | **1** |
+| **Total** | **29** | **25** | **1** |
 
 ## Configuration Surface
 
