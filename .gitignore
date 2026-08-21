@@ -4,3 +4,8 @@ redhat-opentelemetry-collector/
 opentelemetry-operator/
 konflux-opentelemetry/
 openshift-docs/
+distributed-tracing-console-plugin/
+logging-view-plugin/
+multicluster-observability-addon/
+distributed-tracing-qe/
+release/

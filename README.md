@@ -4,17 +4,19 @@ Cross-repo workspace for Red Hat build of OpenTelemetry — shared specs, routin
 
 ## Repositories
 
-| Repo                                                                                                                | Purpose                                                               |
-|---------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
-| [opentelemetry-collector](https://github.com/open-telemetry/opentelemetry-collector)                                | Core collector                                                        |
-| [opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)                | Collector contrib with all components                                 |
-| [redhat-opentelemetry-collector](https://github.com/os-observability/redhat-opentelemetry-collector)                | Red Hat distribution of the collector                                 |
-| [opentelemetry-operator](https://github.com/open-telemetry/opentelemetry-operator)                                  | Kubernetes operator                                                   |
-| [konflux-opentelemetry](https://github.com/os-observability/konflux-opentelemetry)                                  | Downstream productization repository, contains all product components |
-| [openshift-docs](https://github.com/openshift/openshift-docs/tree/standalone-otel-docs-main)                        | Documentation for the Red Hat build of OpenTelemetry                  |
-| [distributed-tracing-console-plugin](https://github.com/openshift/distributed-tracing-console-plugin)               | OpenShift console plugin for distributed tracing                      |
-| [logging-view-plugin](https://github.com/openshift/logging-view-plugin)                                             | OpenShift console plugin for logging view                             |
-| [multicluster-observability-addon](https://github.com/stolostron/multicluster-observability-addon)                   | Multi-cluster observability addon for ACM, includes OpenTelemetry     |
+| Repo                                                                                                 | Purpose                                                               |
+|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| [opentelemetry-collector](https://github.com/open-telemetry/opentelemetry-collector)                 | Core collector                                                        |
+| [opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib) | Collector contrib with all components                                 |
+| [redhat-opentelemetry-collector](https://github.com/os-observability/redhat-opentelemetry-collector) | Red Hat distribution of the collector                                 |
+| [opentelemetry-operator](https://github.com/open-telemetry/opentelemetry-operator)                   | Kubernetes operator                                                   |
+| [konflux-opentelemetry](https://github.com/os-observability/konflux-opentelemetry)                   | Downstream productization repository, contains all product components |
+| [openshift-docs](https://github.com/openshift/openshift-docs/tree/standalone-otel-docs-main)         | Documentation for the Red Hat build of OpenTelemetry                  |
+| [distributed-tracing-console-plugin](https://github.com/openshift/distributed-tracing-console-plugin) | OpenShift console plugin for distributed tracing                      |
+| [logging-view-plugin](https://github.com/openshift/logging-view-plugin)                              | OpenShift console plugin for logging view                             |
+| [multicluster-observability-addon](https://github.com/stolostron/multicluster-observability-addon)   | Multi-cluster observability addon for ACM, includes OpenTelemetry     |
+| [distributed-tracing-qe](https://github.com/openshift/distributed-tracing-qe)                        | Additional product test in tests/e2e-otel                             |
+| [release](https://github.com/openshift/release) | OpenShift CI jobs for stage and downstream in ci-operator/config/openshift/open-telemetry-opentelemetry-operator           |
 
 ## Setup
 
@@ -27,7 +29,7 @@ done
 for repo in redhat-opentelemetry-collector konflux-opentelemetry; do
   git clone git@github.com:os-observability/$repo.git
 done
-for repo in distributed-tracing-console-plugin logging-view-plugin; do
+for repo in distributed-tracing-console-plugin logging-view-plugin distributed-tracing-qe release; do
   git clone git@github.com:openshift/$repo.git
 done
 git clone --single-branch --branch standalone-otel-docs-main git@github.com:openshift/openshift-docs.git
@@ -39,7 +41,7 @@ Pull all repos:
 ```bash
 for d in opentelemetry-collector opentelemetry-collector-contrib opentelemetry-operator \
   redhat-opentelemetry-collector konflux-opentelemetry \
-  distributed-tracing-console-plugin logging-view-plugin openshift-docs \
+  distributed-tracing-console-plugin logging-view-plugin distributed-tracing-qe release openshift-docs \
   multicluster-observability-addon; do
   [ -d "$d/.git" ] && echo "=== $d ===" && git -C "$d" pull --ff-only
 done
