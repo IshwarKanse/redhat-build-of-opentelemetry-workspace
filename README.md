@@ -23,28 +23,13 @@ Cross-repo workspace for Red Hat build of OpenTelemetry — shared specs, routin
 Clone all repos into this directory:
 
 ```bash
-for repo in opentelemetry-collector opentelemetry-collector-contrib opentelemetry-operator; do
-  git clone git@github.com:open-telemetry/$repo.git
-done
-for repo in redhat-opentelemetry-collector konflux-opentelemetry; do
-  git clone git@github.com:os-observability/$repo.git
-done
-for repo in distributed-tracing-console-plugin logging-view-plugin distributed-tracing-qe release; do
-  git clone git@github.com:openshift/$repo.git
-done
-git clone --single-branch --branch standalone-otel-docs-main git@github.com:openshift/openshift-docs.git
-git clone git@github.com:stolostron/multicluster-observability-addon.git
+make clone-repos
 ```
 
-Pull all repos:
+Pull latest changes in all repos:
 
 ```bash
-for d in opentelemetry-collector opentelemetry-collector-contrib opentelemetry-operator \
-  redhat-opentelemetry-collector konflux-opentelemetry \
-  distributed-tracing-console-plugin logging-view-plugin distributed-tracing-qe release openshift-docs \
-  multicluster-observability-addon; do
-  [ -d "$d/.git" ] && echo "=== $d ===" && git -C "$d" pull --ff-only
-done
+make pull-repos
 ```
 
 ## Specs
