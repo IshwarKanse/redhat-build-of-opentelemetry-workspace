@@ -56,7 +56,7 @@ The distro includes 12 exporters in source. Support levels per documentation:
 | AWS EMF | **TP** | |
 | AWS X-Ray | **TP** | |
 | File | **TP** | |
-| Google Cloud | **TP** | |
+| Google Cloud | **TP** | Deprecated in 3.11.0; use OTLP HTTP Exporter + Google Client Auth Extension instead |
 
 ### Processors
 
