@@ -11,3 +11,6 @@ logging-view-plugin/
 multicluster-observability-addon/
 distributed-tracing-qe/
 release/
+
+# Regression detection
+reports/
