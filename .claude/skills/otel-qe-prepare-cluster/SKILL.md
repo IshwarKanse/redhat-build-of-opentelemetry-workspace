@@ -1,6 +1,6 @@
 ---
 name: otel-qe-prepare-cluster
-description: Provisions or connects to an OpenShift cluster for QE testing.
+description: Provisions or connects to an OpenShift cluster for QE testing. Use when the user asks to get, provision, or connect to a cluster for QE testing.
 ---
 
 # Prepare QE Cluster

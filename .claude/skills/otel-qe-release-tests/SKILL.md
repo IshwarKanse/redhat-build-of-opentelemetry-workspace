@@ -1,6 +1,6 @@
 ---
 name: otel-qe-release-tests
-description: Execute release testing for Red Hat build of OpenTelemetry. Prepares test repositories, fetches test requirements from Jira, and triggers all required CI jobs for a release.
+description: Execute release testing for Red Hat build of OpenTelemetry. Prepares test repositories, fetches test requirements from Jira, and triggers all required CI jobs for a release. Use when the user asks to run or trigger release testing for RHOSDT.
 ---
 
 # Run Release Tests

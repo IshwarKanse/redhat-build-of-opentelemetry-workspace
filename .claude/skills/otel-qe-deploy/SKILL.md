@@ -1,6 +1,6 @@
 ---
 name: otel-qe-deploy
-description: Installs the operators and example setups of Tempo and OTEL.
+description: Installs the operators and example setups of Tempo and OTEL. Use when the user asks to deploy or set up Tempo and OpenTelemetry on a cluster for QE testing.
 ---
 
 # Prepare Cluster

@@ -1,6 +1,6 @@
 ---
 name: otel-qe-test-ibm
-description: Runs OpenTelemetry operator e2e tests on IBM P (ppc64le) and IBM Z (s390x) clusters using chainsaw.
+description: Runs OpenTelemetry operator e2e tests on IBM P (ppc64le) and IBM Z (s390x) clusters using chainsaw. Use when the user asks to run operator tests on IBM P or IBM Z.
 ---
 
 # Test OpenTelemetry on IBM P and IBM Z

@@ -33,7 +33,7 @@ After brainstorming writes and commits a spec change, **auto-push and open a PR*
     - Internal contradictions between sections or spec files
     - Inconsistencies with existing specs (cross-reference `.ai/spec/` files touched vs untouched)
     - Broken or dangling cross-references between spec files
-    - Placeholder text (TBD, TODO, FIXME, incomplete sections)
+    - Placeholder text (unresolved "to be decided" notes, unfinished-work markers, incomplete sections)
     - Formatting or structural issues
     - Scope creep beyond what was discussed in brainstorming
     - If issues are found: fix them, amend the commit, and re-review
