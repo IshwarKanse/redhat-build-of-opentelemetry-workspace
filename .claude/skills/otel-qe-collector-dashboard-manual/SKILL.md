@@ -1,6 +1,6 @@
 ---
 name: otel-qe-collector-dashboard-manual
-description: Manual test for OpenTelemetry collector dashboards on OpenShift.
+description: Manual test for OpenTelemetry collector dashboards on OpenShift. Use when the user asks to manually verify or test the collector dashboards.
 ---
 
 # OpenTelemetry Collector Dashboard Manual Test

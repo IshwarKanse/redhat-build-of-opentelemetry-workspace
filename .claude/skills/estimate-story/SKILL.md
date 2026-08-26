@@ -4,7 +4,8 @@ description: >
   Estimate story points for TRACING Jira stories using the calibrated rubric
   derived from 300 completed stories. Fetches the story, applies the decision
   tree, sets the SP field, and appends the estimate to the description.
-  Use for on-demand estimation or after creating a new story.
+  Use when the user asks to estimate or point a TRACING story, for
+  on-demand estimation, or after creating a new story.
 argument-hint: "TRACING-1234 [TRACING-1235 ...]"
 ---
 

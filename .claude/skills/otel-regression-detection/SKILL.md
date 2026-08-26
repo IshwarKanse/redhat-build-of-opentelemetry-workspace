@@ -1,6 +1,6 @@
 ---
 name: otel-regression-detection
-description: Detect regressions in upstream OpenTelemetry repos compared to the downstream Red Hat build of OpenTelemetry release. Dynamically discovers components from manifest.yaml and docs. Analyzes changelogs, code diffs, feature gates, GitHub issues, doc staleness, test coverage gaps, and dependency changes.
+description: Detect regressions in upstream OpenTelemetry repos compared to the downstream Red Hat build of OpenTelemetry release. Dynamically discovers components from manifest.yaml and docs. Analyzes changelogs, code diffs, feature gates, GitHub issues, doc staleness, test coverage gaps, and dependency changes. Use when the user asks to check for upstream regressions or breaking changes ahead of a release.
 argument-hint: "[--method changelog|code-diff|feature-gates|issues|doc-validation|test-coverage|dependencies] [--release-version 3.10]"
 ---
 

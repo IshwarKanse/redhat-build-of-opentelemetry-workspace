@@ -1,6 +1,6 @@
 ---
 name: otel-qe-verify-fixes
-description: Verify CVE and bug fixes listed in an OpenTelemetry release payload. Reads release notes from release-payloads/*.yaml, looks up each referenced Jira issue and CVE, and verifies the fixes.
+description: Verify CVE and bug fixes listed in an OpenTelemetry release payload. Reads release notes from release-payloads/*.yaml, looks up each referenced Jira issue and CVE, and verifies the fixes. Use when the user asks to verify CVE or bug fixes for a release payload.
 ---
 
 # Verify CVE and Bug Fixes

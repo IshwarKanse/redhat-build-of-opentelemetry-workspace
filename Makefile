@@ -1,4 +1,4 @@
-.PHONY: clone-repos pull-repos remove-repos help
+.PHONY: clone-repos pull-repos remove-repos lint lint-fix help
 
 REPOS = \
 	open-telemetry/opentelemetry-collector \
@@ -14,6 +14,8 @@ REPOS = \
 	stolostron/multicluster-observability-addon
 
 REPO_DIRS = $(foreach r,$(REPOS),$(notdir $(r)))
+
+SKILLSAW_IMAGE := ghcr.io/stbenjam/skillsaw:latest
 
 # Clone all workspace repos into this directory
 # konflux-opentelemetry: --recurse-submodules to populate operator and collector submodules
@@ -50,9 +52,17 @@ remove-repos:
 	done
 	@echo "Done. Run 'make clone-repos' to re-clone."
 
+lint:
+	@docker run --rm -v "$$(pwd):/workspace:Z" $(SKILLSAW_IMAGE) lint --strict $(SKILLSAW_ARGS)
+
+lint-fix:
+	@docker run --rm -v "$$(pwd):/workspace:Z" $(SKILLSAW_IMAGE) fix
+
 help:
 	@echo "Available targets:"
 	@echo "  clone-repos    - Clone all workspace repos into this directory"
 	@echo "  pull-repos     - Pull latest in all cloned repos"
 	@echo "  remove-repos   - Delete all cloned repos to start fresh"
+	@echo "  lint           - Run skillsaw linter (Docker)"
+	@echo "  lint-fix       - Auto-fix fixable issues"
 	@echo "  help           - Show this help"
