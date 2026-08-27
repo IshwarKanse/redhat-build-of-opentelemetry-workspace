@@ -112,6 +112,10 @@ jobs:
         env:
           GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
+      - name: Use HTTPS for cloning (CI runner has no SSH key)
+        if: steps.release-check.outputs.skip != 'true'
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
       - name: Clone repos
         if: steps.release-check.outputs.skip != 'true'
         run: make clone-repos
