@@ -29,8 +29,9 @@ registry required — in seconds.
 
 ## What the full disconnected CI job does (for context)
 
-`openshift/distributed-tracing-qe`'s `ocp-4.16-disconnected` job
-([release/ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml](../../../release/ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml))
+`openshift/distributed-tracing-qe`'s `ocp-4.16-disconnected` job (config:
+`release/ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml`
+in the separate `openshift/release` repo — see "Reference files" below)
 does three things via `cucushift-installer-rehearse-gcp-ipi-disconnected`:
 
 1. `distributed-tracing-install-disconnected` — runs `oc-mirror --v1` against the OTEL/Tempo IIB
@@ -62,8 +63,8 @@ job — see "What this does not cover" below.
         `tempo-bundle-main`). The `*-prod-*.yaml` files are Release *requests* and don't carry a
         `spec.components` snapshot until they're actually released — use the stage file.
      2. Extract the CSV from that bundle image using the same skopeo-copy + untar approach as
-        [konflux-opentelemetry/scripts/validate-bundle-sdk.sh](../../../konflux-opentelemetry/scripts/validate-bundle-sdk.sh)
-        (see its `skopeo copy` / blob-extraction steps): copy the image to an OCI dir, untar the
+        `konflux-opentelemetry/scripts/validate-bundle-sdk.sh` (a separate repo — see "Reference
+        files" below; look at its `skopeo copy` / blob-extraction steps): copy the image to an OCI dir, untar the
         gzip blobs, then read `manifests/*.clusterserviceversion.yaml` from the extracted tree.
         That script itself execs straight into `operator-sdk bundle validate` and doesn't leave a
         reusable CSV file behind, so extract the CSV yourself using its approach rather than
@@ -126,8 +127,11 @@ For those, run the full `distributed-tracing-tests-disconnected` disconnected CI
 
 ## Reference files
 
-- CI job: [release/ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml](../../../release/ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml)
-- Install step: [release/ci-operator/step-registry/distributed-tracing/install/disconnected/distributed-tracing-install-disconnected-commands.sh](../../../release/ci-operator/step-registry/distributed-tracing/install/disconnected/distributed-tracing-install-disconnected-commands.sh)
-- Test step: [release/ci-operator/step-registry/distributed-tracing/tests/disconnected/distributed-tracing-tests-disconnected-commands.sh](../../../release/ci-operator/step-registry/distributed-tracing/tests/disconnected/distributed-tracing-tests-disconnected-commands.sh)
-- Konflux bundle validator: [konflux-opentelemetry/scripts/validate-bundle-sdk.sh](../../../konflux-opentelemetry/scripts/validate-bundle-sdk.sh)
-- CSV patch template (where `RELATED_IMAGE_*` env vars come from): [konflux-opentelemetry/bundle-patch/patch_csv.yaml](../../../konflux-opentelemetry/bundle-patch/patch_csv.yaml)
+These all live in **separate repos** cloned alongside this workspace (see the top-level
+`README.md`), not in this repo — so they're plain paths below, not links:
+
+- CI job (in `openshift/release`): `ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml`
+- Install step (in `openshift/release`): `ci-operator/step-registry/distributed-tracing/install/disconnected/distributed-tracing-install-disconnected-commands.sh`
+- Test step (in `openshift/release`): `ci-operator/step-registry/distributed-tracing/tests/disconnected/distributed-tracing-tests-disconnected-commands.sh`
+- Konflux bundle validator (in `os-observability/konflux-opentelemetry`): `scripts/validate-bundle-sdk.sh`
+- CSV patch template, where `RELATED_IMAGE_*` env vars come from (in `os-observability/konflux-opentelemetry`): `bundle-patch/patch_csv.yaml`
