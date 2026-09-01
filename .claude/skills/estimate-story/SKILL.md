@@ -11,6 +11,21 @@ argument-hint: "TRACING-1234 [TRACING-1235 ...]"
 
 # Estimate Story Points for TRACING Stories
 
+## Rubric Location
+
+Read the full rubric from: `story-point-rubric.md` (in the workspace root)
+
+You MUST read this file before estimating. It contains:
+- Point definitions (0, 0.5, 1, 2, 3, 5) with characteristics and code complexity data
+- Decision tree for base estimate
+- Bias corrections from blind testing
+- Complexity multipliers (up/down factors)
+- Component-specific guidance
+
+## Dependencies
+
+- **`atlassian` plugin** (Atlassian MCP server, install from the `claude-plugins-official` marketplace) — provides the `mcp__atlassian__*` tools this skill uses to fetch and edit Jira issues. If it isn't installed or authenticated, tell the user and pause rather than guessing at story points without Jira access.
+
 ## Overview
 
 Estimate story points for one or more TRACING Jira stories using the team's
@@ -26,17 +41,6 @@ an estimation note to the description.
 
 Also invoked automatically after creating a new TRACING story.
 Works for Stories, Bugs, Tasks, Weaknesses, and Vulnerabilities.
-
-## Rubric Location
-
-Read the full rubric from: `story-point-rubric.md` (in the workspace root)
-
-You MUST read this file before estimating. It contains:
-- Point definitions (0, 0.5, 1, 2, 3, 5) with characteristics and code complexity data
-- Decision tree for base estimate
-- Bias corrections from blind testing
-- Complexity multipliers (up/down factors)
-- Component-specific guidance
 
 ## Workflow
 

@@ -11,6 +11,10 @@ argument-hint: "[TRACING-1234 ...] (omit to size all unsized Epics)"
 
 # Size Epics by Sprint Count
 
+## Dependencies
+
+- **`atlassian` plugin** (Atlassian MCP server, install from the `claude-plugins-official` marketplace) — provides the `mcp__atlassian__*` tools this skill uses to query and edit Jira issues. If it isn't installed or authenticated, tell the user and pause rather than guessing at story points without Jira access.
+
 ## Overview
 
 Set story points on TRACING Epics based on the sum of child issue story
