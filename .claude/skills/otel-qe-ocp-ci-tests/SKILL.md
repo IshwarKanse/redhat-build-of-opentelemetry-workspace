@@ -1,10 +1,10 @@
 ---
-name: otel-qe-release-tests
-description: Set up OpenTelemetry release stage testing by creating a PR to openshift/release with IIBs from konflux release payloads. Use when starting stage testing for a new product release or updating IIB images after a Konflux FBC build.
+name: otel-qe-ocp-ci-tests
+description: Set up OpenTelemetry OCP CI stage testing by creating a PR to openshift/release with IIBs from konflux release payloads, then triggering the stage jobs. Use when starting stage testing for a new product release or updating IIB images after a Konflux FBC build.
 argument-hint: 'version: RHOSDT release version (e.g., "3.11", "3.12")'
 ---
 
-# OpenTelemetry Release Testing
+# OpenTelemetry OCP CI Stage Testing
 
 Set up stage testing for Red Hat build of OpenTelemetry release by creating a PR to the `openshift/release` repository with correct IIB (Index Image Build) mappings from the Konflux release payload.
 
@@ -14,6 +14,7 @@ Set up stage testing for Red Hat build of OpenTelemetry release by creating a PR
 2. The `release` GitHub repository must be cloned in the workspace  
 3. Your GitHub fork of `openshift/release` must be configured as a remote
 4. The `gh` CLI must be authenticated
+5. The `oc` CLI must be logged into `app.ci` (`oc login --server=https://api.ci.l2s4.p1.openshiftapps.com:6443`) — needed for gcsweb/deck artifact access
 
 ## CI Jobs in Release Repository
 
@@ -23,8 +24,9 @@ The OpenShift CI jobs for OpenTelemetry stage testing are defined in the `releas
 
 **File naming pattern:**
 ```
-openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-{VERSION}-{VARIANT}-stage.yaml
+openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-{VERSION}[-{VARIANT}]-stage.yaml
 ```
+The `-{VARIANT}` segment is omitted entirely for Regular (e.g. `...ocp-4.19-stage.yaml`, not `...ocp-4.19--stage.yaml`).
 
 **Examples:**
 - `openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-4.19-stage.yaml`
@@ -46,6 +48,8 @@ ls release/ci-operator/config/openshift/open-telemetry-opentelemetry-operator/*s
 periodic-ci-openshift-open-telemetry-opentelemetry-operator-main-opentelemetry-product-ocp-{VERSION}-{VARIANT}-stage-opentelemetry-stage-tests
 ```
 
+**Disconnected test job:** lives in a different project directory in the same `release` repo, not the one above — `ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml`, job name `periodic-ci-openshift-distributed-tracing-qe-main-ocp-4.16-disconnected-distributed-tracing-tests-disconnected`. It needs both `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` and `MULTISTAGE_PARAM_OVERRIDE_TEMPO_INDEX_IMAGE` updated the same way as the other configs — it's part of the same PR, just a different file. Its `cron: 0 0 30 2 *` (an impossible date) is intentional: every one of these jobs is on-demand only, triggered via `/pj-rehearse` or Gangway, never on a schedule.
+
 ## Steps
 
 ### Step 1: Extract IIB Mappings from Konflux Release Payload
@@ -58,7 +62,7 @@ Look for sections like:
   index_image: registry-proxy.engineering.redhat.com/rh-osbs/iib:1201672
 ```
 
-Create a mapping of OCP version to IIB number for all versions in the payload.
+Create a mapping of OCP version to IIB number for all versions in the payload, stripping the leading `v` from `ocp_version` (e.g. `v4.19` → `4.19`) — file and job names use the bare version number.
 
 ### Step 2: Update CI Configuration Files
 
@@ -68,11 +72,13 @@ For each OCP version in the IIB mapping, update the corresponding stage test con
 
 **Changes to make:**
 1. Update `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` to `brew.registry.redhat.io/rh-osbs/iib:{IIB_NUMBER}`
+2. Also update the disconnected test config (see Disconnected test job above) with the matching `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` and `MULTISTAGE_PARAM_OVERRIDE_TEMPO_INDEX_IMAGE` — same PR, same IIB values.
 
 **IMPORTANT:**
 - Only update files for OCP versions that exist in the IIB mapping
 - Do NOT create configs for versions not in the mapping
 - Update BOTH regular and variant configs (e.g., 4.22-stage AND 4.22-fips-stage AND 4.22-arm-stage)
+- Don't skip the disconnected config just because it's in a different project directory
 - Preserve all other configuration settings
 
 ### Step 3: Create Git Branch and Commit
@@ -80,7 +86,8 @@ For each OCP version in the IIB mapping, update the corresponding stage test con
 ```bash
 cd release
 git checkout -b otel-{VERSION}-stage-tests
-git add ci-operator/config/openshift/open-telemetry-opentelemetry-operator/*stage.yaml
+git add <path-to-each-file-updated-in-step-2>  # only the specific files edited above, not a wildcard
+git diff --cached --name-only                  # verify no unrelated files got staged
 git commit -s -m "OTEL RHOSDT {VERSION}: Stage tests
 
 Stage testing for RHOSDT: OTEL {VERSION}
@@ -90,19 +97,34 @@ Stage testing for RHOSDT: OTEL {VERSION}
 
 ### Step 4: Push to Fork
 
+Push to your fork remote, not `origin` (find it with `git remote -v | grep push | grep <your-github-username>`):
+
+```bash
+git push <fork-remote> otel-{VERSION}-stage-tests
+```
+
 ### Step 5: Create Pull Request
+
+```bash
+gh pr create --repo openshift/release --head <fork-user>:otel-{VERSION}-stage-tests --base main \
+  --title "OTEL RHOSDT {VERSION}: Stage tests" \
+  --body "Stage testing for RHOSDT: OTEL {VERSION}. Updated IIB images from konflux release payload. Can be merged only after all jobs pass."
+```
+
+Note the PR number from the output — it's `{PR_NUMBER}` in Step 6.
 
 ### Step 6: Trigger Rehearsal Jobs
 
 Add a comment to the PR to trigger all rehearsal jobs:
 
 ```bash
-gh pr comment {PR_NUMBER} --body "/pj-rehearse {job-list}"
+gh pr comment {PR_NUMBER} --repo openshift/release --body "/pj-rehearse {job-list}"
 ```
 
-Where `{job-list}` is a space-separated list of all job names from the updated configs. Job name pattern:
+Where `{job-list}` is a space-separated list of all job names from the updated configs, including the disconnected job's periodic name — periodics rehearse via `/pj-rehearse` the same way presubmits do. Job name pattern:
 ```
 periodic-ci-openshift-open-telemetry-opentelemetry-operator-main-opentelemetry-product-ocp-{VERSION}-{VARIANT}-stage-opentelemetry-stage-tests
+periodic-ci-openshift-distributed-tracing-qe-main-ocp-4.16-disconnected-distributed-tracing-tests-disconnected
 ```
 
 **Example:**
@@ -139,15 +161,25 @@ tests:
 
 The step refs correspond to step registry entries in `ci-operator/step-registry/`.
 
+### Checking the qe-agent Step Before Manual Log Digging
+
+Every stage job also runs an `openshift-observability-qe-agent` step that reruns failures, diagnoses flaky vs. regression, applies fixes, and can auto-file a Jira bug — check it first, at `artifacts/{test-name}/openshift-observability-qe-agent/`.
+
+1. Read that step's `build-log.txt` to see which path it took:
+   - `"Test failures detected — proceeding with qe-agent analysis."` — it ran. Read `artifacts/qe-agent-analysis.md` for the diagnosis (FLAKY vs. REGRESSION), root cause, and rerun results. Check `artifacts/test-fixes/` for any fix applied, and `artifacts/jira-issue-key.txt` for an auto-filed bug.
+   - `"All tests passed — no failures detected. Skipping qe-agent."` — the job actually passed; nothing to investigate.
+   - Any other `"skipping qe-agent"` line (missing context file, Claude CLI, `AGENT_SKILL`, or a skill fetch/size error) — it didn't get to run despite a real failure. Fall back to the failing test step's own `build-log.txt` and JUnit XML directly (see below).
+
 ### Browsing Test Artifacts via gcsweb
 
 After jobs run, their artifacts (logs, test results, cluster state) are stored in GCS and browsable via gcsweb.
 
 **Authentication:**
-gcsweb requires a bearer token. Obtain one by logging into the OpenShift CI console at `https://console-openshift-console.apps.ci.l2s4.p1.openshiftapps.com/` and copying the token from the user menu (Copy login command → Display Token). Use it with:
+gcsweb requires an OpenShift OAuth token, not a Kubernetes ServiceAccount token — `oc login` to `app.ci` first (console: `https://console-openshift-console.apps.ci.l2s4.p1.openshiftapps.com/` → username menu → Copy login command), then:
 ```bash
-curl -H "Authorization: Bearer <token>" <gcsweb-url>
+printf 'Authorization: Bearer %s\n' "$(oc whoami -t)" | curl -H @- <gcsweb-url>
 ```
+(reads the header from stdin — keeps the token out of argv/`ps`/shell history)
 
 **URL Pattern:**
 ```
