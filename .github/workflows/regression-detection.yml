@@ -165,7 +165,7 @@ jobs:
         if: always() && steps.release-check.outputs.skip != 'true'
         run: |
           REPORT_DATE=$(date +%Y-%m-%d)
-          REPORT_FILE="reports/regression-report-${REPORT_DATE}.md"
+          REPORT_FILE="reports/regression-report-${REPORT_DATE}.html"
           SUMMARY_FILE="reports/regression-summary-${REPORT_DATE}.json"
 
           echo "## Regression Detection — ${{ steps.release-check.outputs.latest_tag }}" >> "$GITHUB_STEP_SUMMARY"
@@ -186,7 +186,7 @@ jobs:
             echo "| Low | $LOW |" >> "$GITHUB_STEP_SUMMARY"
             echo "| **Total** | **$TOTAL** |" >> "$GITHUB_STEP_SUMMARY"
           elif [ -f "$REPORT_FILE" ]; then
-            head -50 "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
+            echo "Summary counts unavailable — see the full HTML report in the uploaded artifact (${REPORT_FILE})." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No report generated. Check job logs for errors." >> "$GITHUB_STEP_SUMMARY"
           fi
