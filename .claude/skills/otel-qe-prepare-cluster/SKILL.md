@@ -26,9 +26,8 @@ If you're not already connected to an OpenShift cluster, you can either use:
 5. Wait approximately **1 hour** for the cluster to be provisioned
 6. ClusterBot will send you the kubeconfig/login credentials once the cluster is ready
 
-## Get FBC fragment images from the Konflux repo
-The user must provide the release version (e.g. 3.10.0). Use the `/gitlab` skill to fetch the FBC fragment images or OLM bundle from the Konflux release-payloads directory on GitLab.
-Use the `/rhosdt-team:rhosdt-team` skill to get the release payload.
+## Get FBC fragment images or OLM bundle from the Konflux repo
+The user must provide the release version (e.g. 3.10.0). Read `konflux/release-payloads/otel-stage-<version>.yaml` (and `tempo-stage-<version>.yaml` for Tempo) from the locally-cloned `konflux` repo — look for the `containerImage`/`index_image` field under the relevant component.
 
 The FBC fragments work only on amd64 clusters, on arm64 clusters or IBM P/Z clusters the OLM bundle must be used.
 

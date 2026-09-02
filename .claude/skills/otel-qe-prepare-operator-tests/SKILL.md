@@ -1,6 +1,6 @@
 ---
-name: otel-qe-prepare-operator
-description: Use this skill to prepare OpenTelemetry operator for product testing.
+name: otel-qe-prepare-operator-tests
+description: Prepare the OpenTelemetry operator repository's product branch (rhosdt-x.y) for QE product/pre-GA testing (stage CI jobs, IBM P/Z, and other product-branch test flows) — clones/syncs the branch and applies the modifications it needs for testing. Use when the user asks to prepare, sync, or set up the OpenTelemetry operator repo for product testing.
 ---
 
 # Prepare OpenTelemetry Operator for Testing
@@ -24,7 +24,7 @@ cd opentelemetry-operator
 git checkout rhosdt-3.10
 ```
 
-If the repo is already present, sync with the product branch:
+If the repo is already present, sync with the product branch. This clone is disposable test-fixture scratch space, not a place for uncommitted work — confirm that with the user before running `git clean -fd`, since it deletes untracked files:
 
 ```bash
 git restore .

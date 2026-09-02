@@ -17,7 +17,7 @@ registry required — in seconds.
 
 ## Dependencies
 
-- **`otel-qe-deploy`** skill — typical predecessor when validating a live cluster: it installs
+- **`otel-qe-deploy-stage-build`** skill — typical predecessor when validating a live cluster: it installs
   the OTEL/Tempo operators, producing the installed CSVs this skill then checks. Not required if
   you're validating a bundle image directly (no cluster involved).
 - **`atlassian` plugin** (Atlassian MCP server, install from the `claude-plugins-official`
@@ -50,7 +50,7 @@ job — see "What this does not cover" below.
 ## Steps
 
 1. **Pick a source for the CSV.** Ask the user if it isn't already clear from context:
-   - **Live cluster** (fastest — use this right after `otel-qe-deploy` or any manual install).
+   - **Live cluster** (fastest — use this right after `otel-qe-deploy-stage-build` or any manual install).
      Discover the namespace and CSV name together first (avoids guessing a namespace):
      ```bash
      oc get csv -A | grep -i -E 'opentelemetry|tempo'

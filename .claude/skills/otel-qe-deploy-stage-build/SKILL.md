@@ -1,9 +1,9 @@
 ---
-name: otel-qe-deploy
-description: Installs the operators and example setups of Tempo and OTEL. Use when the user asks to deploy or set up Tempo and OpenTelemetry on a cluster for QE testing.
+name: otel-qe-deploy-stage-build
+description: Installs the OTEL and Tempo operators from a Konflux stage/product build (FBC fragments or OLM bundle from a release payload) and their example setups on a cluster. Use when the user asks to deploy, install, or set up the stage/product build of Tempo and OpenTelemetry on a cluster for QE testing. For building and installing the upstream operator from source instead, use otel-qe-deploy-upstream-build.
 ---
 
-# Prepare Cluster
+# Deploy the Stage/Product Build
 
 ## Step 0: Get a cluster
 If not already connected to an OpenShift cluster, use the `/otel-qe-prepare-cluster` skill to provision one.
@@ -22,7 +22,7 @@ kubectl apply -f https://raw.githubusercontent.com/os-observability/konflux-open
 
 This method uses FBC (File-Based Catalog) fragments and only works on `amd64` clusters.
 
-Search `konflux-opentelemetry` repository to find the release payload (FBC fragments or OLM bundle).
+Search the `konflux` repository's `release-payloads/` directory to find the release payload (FBC fragments or OLM bundle) — see `/otel-qe-prepare-cluster`.
 
 **Before applying**, replace the `spec.image` field in all `CatalogSource` resources with the FBC fragment image from the Konflux repo:
 - In [`install-operators/tempo.yaml`](install-operators/tempo.yaml): replace the CatalogSource `spec.image` with the Tempo FBC fragment image
