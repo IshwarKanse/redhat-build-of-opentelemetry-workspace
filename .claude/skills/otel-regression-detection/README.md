@@ -11,7 +11,7 @@ Automated system that detects upstream regressions in OpenTelemetry repos compar
 | Feature gate tracking | Gates promoted Alpha→Beta→Stable→Removed that change defaults |
 | GitHub issue/PR scanning | Bugs, regressions, reverted PRs via `gh` CLI |
 | Doc validation | Stale docs (field removed upstream), undocumented new fields |
-| Test coverage matrix | Per-component coverage report (dedicated/implicit/none) |
+| Test coverage matrix | Per-component AND per-operator-feature coverage report (dedicated/implicit/none) |
 | Dependency tracking | Significant version bumps in go.mod |
 
 ## Run locally
@@ -53,8 +53,12 @@ It can also be triggered manually via the **Run workflow** button on the [Action
 ## Output
 
 Reports are written to `reports/`:
-- `regression-report-YYYY-MM-DD.md` — full markdown report with findings by severity
+- `regression-report-YYYY-MM-DD.html` — self-contained HTML report with findings by severity (open in a browser)
 - `regression-summary-YYYY-MM-DD.json` — machine-readable summary counts
+
+Example output:
+
+![Example regression detection report](example-report.png)
 
 ## How it stays current
 

@@ -29,10 +29,10 @@ The workflow has 4 phases:
    - **Feature Gate Tracking** — detects feature gate promotions that change default behavior
    - **GitHub Issue/PR Scanning** — finds bugs, regressions, and reverted PRs via `gh` CLI
    - **Doc Validation** — reads `.adoc` files and cross-references config options against upstream config structs
-   - **Test Coverage Matrix** — builds a full per-component coverage report (dedicated/implicit/none for both upstream and QE tests), highlights gaps, detects upstream test deletions
+   - **Test Coverage Matrix** — builds a full per-component coverage report (dedicated/implicit/none for both upstream and QE tests) plus a separate operator feature coverage matrix (target allocator, OpAMP bridge, sidecar injection, autoscaling, etc., discovered from the operator's `tests/e2e-*` suites), highlights gaps, detects upstream test deletions
    - **Dependency Tracking** — flags significant version bumps in go.mod
 
-4. **Synthesize** — deduplicates, classifies severity, generates markdown report and JSON summary
+4. **Synthesize** — deduplicates, classifies severity, generates a self-contained HTML report and JSON summary
 
 ## Prerequisites
 
@@ -92,7 +92,7 @@ This uses the `v3.10` tag in `konflux-opentelemetry` to read the exact component
 
 2. **Run the regression detection workflow**: Invoke the Workflow tool with `.claude/workflows/regression-detection.js`, passing repo paths and method as args. The workflow's Discover phase automatically extracts all build metadata from `konflux-opentelemetry`.
 
-3. **Generate report**: Write to `reports/regression-report-YYYY-MM-DD.md` and `reports/regression-summary-YYYY-MM-DD.json`.
+3. **Generate report**: Write to `reports/regression-report-YYYY-MM-DD.html` and `reports/regression-summary-YYYY-MM-DD.json`.
 
 4. **Present summary**: Show counts by severity and top findings.
 
