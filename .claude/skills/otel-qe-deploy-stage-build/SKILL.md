@@ -51,8 +51,28 @@ Apply [`install-operators/coo.yaml`](install-operators/coo.yaml) using `oc apply
 Ask the user if they want to deploy the following extra operators:
 - **AMQ Streams** (Kafka) — used as a backend/transport for OpenTelemetry pipelines
 - **Loki** — log aggregation backend, used with OpenTelemetry log collection
+- **Red Hat OpenShift Logging (cluster-logging)** — creates the `openshift-logging` namespace and is required alongside Loki for the `export-to-cluster-logging-lokistack` sub-test
 
-Apply the respective manifest from the `install-operators-extra/` folder (relative to this skill) using `oc apply -f`. Wait for the operator(s) to be ready before proceeding.
+Apply AMQ Streams's manifest from the `install-operators-extra/` folder (relative to this skill) directly with `oc apply -f` — it uses the version-agnostic `stable` channel.
+
+**Loki and Red Hat OpenShift Logging pin a version-specific channel** (e.g. `stable-6.5`, `stable-6.6`) that tracks the OCP y-stream. Their manifests (`loki.yaml`, `cluster-logging.yaml`) use a `CHANNEL_PLACEHOLDER` instead of a hardcoded channel — look up the right channel for the connected cluster and substitute it into a temporary copy before applying (do not modify the original files).
+
+`loki-operator` exists as a package in more than one catalog (e.g. `redhat-operators` and `community-operators`, the latter defaulting to the `alpha` channel) — `oc get packagemanifest <name>` without filtering can be ambiguous, so filter explicitly on `catalogSource: redhat-operators`:
+
+```bash
+LOKI_CHANNEL=$(oc get packagemanifest -n openshift-marketplace -o json | \
+  jq -r '[.items[] | select(.metadata.name=="loki-operator" and .status.catalogSource=="redhat-operators")][0].status.defaultChannel')
+LOGGING_CHANNEL=$(oc get packagemanifest -n openshift-marketplace -o json | \
+  jq -r '[.items[] | select(.metadata.name=="cluster-logging" and .status.catalogSource=="redhat-operators")][0].status.defaultChannel')
+if [ -z "$LOKI_CHANNEL" ] || [ "$LOKI_CHANNEL" = "null" ] || [ -z "$LOGGING_CHANNEL" ] || [ "$LOGGING_CHANNEL" = "null" ]; then
+  echo "ERROR: could not resolve defaultChannel for loki-operator ('$LOKI_CHANNEL') or cluster-logging ('$LOGGING_CHANNEL') — check the redhat-operators catalog is present" >&2
+  exit 1
+fi
+sed "s/CHANNEL_PLACEHOLDER/$LOKI_CHANNEL/" install-operators-extra/loki.yaml | oc apply -f -
+sed "s/CHANNEL_PLACEHOLDER/$LOGGING_CHANNEL/" install-operators-extra/cluster-logging.yaml | oc apply -f -
+```
+
+Run both `LOKI_CHANNEL`/`LOGGING_CHANNEL` lookups and the `sed | oc apply` in the same shell invocation as each other — the variables don't persist across separate command invocations. Wait for the operator(s) to be ready before proceeding.
 
 ## Step 4: Deploy example instance
 

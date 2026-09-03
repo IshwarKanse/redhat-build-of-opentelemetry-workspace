@@ -10,6 +10,7 @@ Cross-repo workspace for Red Hat build of OpenTelemetry — shared specs, routin
 | [opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib) | Collector contrib with all components                                 |
 | [redhat-opentelemetry-collector](https://github.com/os-observability/redhat-opentelemetry-collector) | Red Hat distribution of the collector                                 |
 | [opentelemetry-operator](https://github.com/open-telemetry/opentelemetry-operator)                   | Kubernetes operator                                                   |
+| [midstream-opentelemetry-operator](https://github.com/os-observability/opentelemetry-operator)       | Product/downstream fork of the operator, holds `rhosdt-x.y` branches used for QE product testing |
 | [konflux-opentelemetry](https://github.com/os-observability/konflux-opentelemetry)                   | Downstream productization repository, contains all product components |
 | [konflux](https://gitlab.cee.redhat.com/distributed-tracing/konflux)                                  | Konflux release documentation and release payloads                    |
 | [openshift-docs](https://github.com/openshift/openshift-docs/tree/standalone-otel-docs-main)         | Documentation for the Red Hat build of OpenTelemetry                  |
@@ -63,3 +64,10 @@ not supported.
 - **Jira**: Project key `TRACING` on `redhat.atlassian.net`
 - **Git workflow**: Fork-based — push to your fork, PR against `origin/main`, squash before pushing
 - **Per-repo guides**: Each repo has an `AGENTS.md` with repo-specific conventions
+
+## Release Testing
+
+To start QE release testing for a new RHOSDT OTEL version:
+
+1. Run the `/otel-qe-release-testing-epic` skill with the release version (e.g. `3.11`) and the assignee for the work. It creates (or reuses) the Jira Epic that tracks release testing and populates it with the standard set of Tasks.
+2. Follow the Epic and work through its Tasks — each Task's description points at the QE skill to use for that piece of testing.

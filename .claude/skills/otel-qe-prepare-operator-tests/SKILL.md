@@ -18,15 +18,18 @@ Use this skill when:
 
 ### Clone and Checkout Product Branch
 
+`os-observability/opentelemetry-operator` (the product/downstream fork) shares its basename with the upstream `open-telemetry/opentelemetry-operator` repo also tracked in this workspace — clone it into `midstream-opentelemetry-operator` to avoid colliding with the upstream directory (matches the workspace `Makefile`'s `clone-repos` convention):
+
 ```bash
-git clone git@github.com:os-observability/opentelemetry-operator.git
-cd opentelemetry-operator
+git clone git@github.com:os-observability/opentelemetry-operator.git midstream-opentelemetry-operator
+cd midstream-opentelemetry-operator
 git checkout rhosdt-3.10
 ```
 
-If the repo is already present, sync with the product branch. This clone is disposable test-fixture scratch space, not a place for uncommitted work — confirm that with the user before running `git clean -fd`, since it deletes untracked files:
+If the repo is already present (check for a directory named `opentelemetry-operator` or `midstream-opentelemetry-operator` with `origin` pointing at `os-observability/opentelemetry-operator`), `cd` into that directory and sync with the product branch. This clone is disposable test-fixture scratch space, not a place for uncommitted work — confirm that with the user before running `git clean -fd`, since it deletes untracked files:
 
 ```bash
+cd <the-detected-directory>
 git restore .
 git clean -fd
 git checkout rhosdt-3.10
@@ -41,7 +44,16 @@ The `rhosdt-3.10` branch must contain the following modifications for product te
 
 Copy the end-to-end tests for OpenTelemetry Collector components from [distributed-tracing-qe](https://github.com/openshift/distributed-tracing-qe/tree/main/tests/e2e-otel) to `tests/e2e-otel/`. These tests provide configuration blueprints and testing patterns for various OpenTelemetry receivers, processors, exporters, and extensions.
 
-After copying, remove the `image:` field specifying `ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib` from the `OpenTelemetryCollector` CR specs. This allows the operator to use its default product image instead of the upstream image.
+### Remove Hardcoded Community Collector Image
+
+Some `OpenTelemetryCollector` CRs across the `tests/` tree — both the freshly-copied `tests/e2e-otel/` tests and pre-existing ones elsewhere (e.g. `tests/e2e/smoke-collector/`, `tests/e2e-openshift/`) — hardcode `image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:...`. Remove that line wherever it appears under `tests/` so the operator injects its default product image instead. Scope the search and the deletion to `tests/` only — the same string also appears in `docs/` (an unrelated usage example) and in generated `junit_*.xml` reports, neither of which should be touched. Anchor the deletion to the `image:` field itself, not just any line containing the string, in case a future file references it elsewhere (e.g. a comment):
+
+```bash
+FILES=$(grep -rl "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib" tests/ || true)
+if [ -n "$FILES" ]; then
+  echo "$FILES" | xargs sed -i '/^\s*image:.*ghcr\.io\/open-telemetry\/opentelemetry-collector-releases\/opentelemetry-collector-contrib/d'
+fi
+```
 
 ### Remove nodeAffinity from Target Allocator Tests
 
@@ -50,3 +62,37 @@ Remove the `ingress-ready` nodeAffinity requirement from the following target al
 - `tests/e2e-targetallocator-cr/01-install.yaml`
 - `tests/e2e-targetallocator/targetallocator-features/00-assert.yaml`
 - `tests/e2e-targetallocator/targetallocator-features/00-install.yaml`
+
+## Verify Modifications
+
+Confirm each modification above actually landed before running any tests — a silent no-op (an empty `tests/e2e-otel/` from a failed copy, a `sed` pattern that matched nothing, a stale `nodeAffinity` block) surfaces later as confusing test failures instead of an obvious setup error. Run all four checks and report each as pass/fail; if any fails, fix the corresponding step above and re-verify before proceeding:
+
+```bash
+echo "=== e2e-otel tests copied ==="
+COUNT=$(find tests/e2e-otel -name 'chainsaw-test.yaml' 2>/dev/null | wc -l)
+echo "$COUNT chainsaw-test.yaml files found"; [ "$COUNT" -gt 0 ] && echo PASS || echo FAIL
+
+echo "=== no hardcoded community image left under tests/ ==="
+if grep -rn "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib" tests/; then
+  echo FAIL
+else
+  echo PASS
+fi
+
+echo "=== no ingress-ready nodeAffinity left in target allocator tests ==="
+if grep -n "ingress-ready" \
+    tests/e2e-targetallocator-cr/01-install.yaml \
+    tests/e2e-targetallocator/targetallocator-features/00-assert.yaml \
+    tests/e2e-targetallocator/targetallocator-features/00-install.yaml; then
+  echo FAIL
+else
+  echo PASS
+fi
+
+echo "=== files touched by the image-removal sed still parse as valid YAML ==="
+FAILED=0
+for f in $(git diff --name-only -- tests/ | grep '\.yaml$'); do
+  python3 -c "import sys, yaml; list(yaml.safe_load_all(open(sys.argv[1])))" "$f" || { echo "INVALID YAML: $f"; FAILED=1; }
+done
+[ "$FAILED" -eq 0 ] && echo PASS || echo FAIL
+```

@@ -6,7 +6,7 @@ argument-hint: 'version: RHOSDT release version (e.g., "3.11", "3.12"), assignee
 
 # OpenTelemetry Release Testing Epic
 
-Create (or reuse) the Jira Epic that tracks QE release testing for an RHOSDT OTEL release, and populate it with a fixed, simplified set of Tasks. Each Task's description points at the current QE skill to use — never at the old `/rhosdt-qe:*` slash commands, which no longer exist.
+Create (or reuse) the Jira Epic that tracks QE release testing for an RHOSDT OTEL release, and populate it with a fixed, simplified set of Tasks. Each Task description points at the current QE skill, never the retired `/rhosdt-qe:*` commands.
 
 This skill only creates/reads Jira issues. It does not run any tests itself — each Task tells whoever picks it up which skill to invoke.
 
@@ -38,7 +38,7 @@ Use this skill when:
 
 **Ask the user** which RHOSDT OTEL version this is for (e.g. "3.11") if it wasn't already given. Also ask for an existing Epic key if the user wants to target one explicitly instead of the default search-or-create in Step 3.
 
-**Ask the user who should be assigned** to the Epic and all its Tasks (name, email, or Jira username) if it wasn't already given. Resolve it to a Jira account ID with `lookupJiraAccountId` — every issue this skill creates or updates in Steps 3 and 5 gets this `assignee_account_id`. If the lookup returns more than one match, ask the user which account to use — do not guess.
+**Ask the user who should be assigned** to the Epic and all its Tasks (name, email, or Jira username) if it wasn't already given. Resolve it to a Jira account ID with `lookupJiraAccountId` (used as `assignee_account_id` in Steps 3 and 5). If the lookup returns more than one match, ask which account — don't guess.
 
 ### Step 2: Determine the Supported OCP Version Range
 
@@ -59,7 +59,7 @@ If the user gave an existing Epic key in Step 1, use it directly and skip the se
 project = TRACING AND issuetype = Epic AND summary ~ "Verify RHOSDT {version} OTEL release"
 ```
 
-This is a fuzzy text search, not an exact match — it can return zero, one, or several results (e.g. a "3.1" search can also match "3.11"). Filter the results to the exact summary `[QE] Verify RHOSDT {version} OTEL release` before deciding:
+This is a fuzzy text search (e.g. "3.1" also matches "3.11"), so filter results to the exact summary `[QE] Verify RHOSDT {version} OTEL release` before deciding:
 
 - **One exact match, not Closed:** reuse it. Always overwrite its description with the current template below (fill in `{version}` and payload links) so skill updates take effect on re-run, and fix any mismatched assignee, `customfield_10028` (`3`), or `customfield_10464` (`{id: "10608"}`) — one `editJiraIssue` call. Report its key.
 - **One exact match, but Closed:** treat as zero matches — never reuse or modify a Closed Epic. Create a new one (below), and tell the user the closed Epic's key in case that's unexpected.
@@ -124,13 +124,9 @@ Goal: Verify the OTEL operator on all supported OCP versions ({MIN}-{MAX}), the 
 #### 2. Tests on IBM P and IBM Z `[manual]`
 
 ```
-Goal: Verify the OTEL operator on IBM P (ppc64le) and IBM Z (s390x) — manually-requested clusters outside OCP CI.
+Goal: Verify the OTEL operator on IBM P (ppc64le) and IBM Z (s390x) — manually-requested clusters outside OCP CI. Request clusters only if none are already provisioned; the product branch is already prepared by the Epic's prep step.
 
-1. Request IBM P and IBM Z clusters from the IBM contacts (see the `rhosdt-team` skill).
-2. Use `otel-qe-prepare-cluster` to verify connectivity (the product branch is already prepared by the Epic's prep step).
-3. Use `otel-qe-deploy-stage-build` (OLM bundle variant) to install the operators, including the extra AMQ Streams and Loki operators.
-4. Use `otel-qe-test-ibm` to run the chainsaw test suites on both clusters.
-5. Report results and file bugs for any failures.
+Use the `otel-qe-test-ibm` skill end-to-end on both clusters — it covers cluster cleanup/reuse, operator install (AMQ Streams, Loki, Red Hat OpenShift Logging), and the chainsaw suites, and lists failures expected on these architectures (eBPF `obi` receiver, Node.js auto-instrumentation). File bugs only for unexplained failures.
 ```
 
 #### 3. Konflux E2E and Upgrade Integration Test Jobs `[Konflux int.]`
