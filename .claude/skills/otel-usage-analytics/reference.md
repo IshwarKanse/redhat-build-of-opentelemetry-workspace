@@ -1,8 +1,8 @@
-# OpenTelemetry CR Insights — Reference
+# OpenTelemetry Usage Analytics — Reference
 
-Background detail for `otel-cr-insights`: collection limits, which fields are
+Background detail for `otel-usage-analytics`: collection limits, which fields are
 collected vs. stripped, the raw CR data shape, and the standard query template
-with CTE explanations. See [queries.md](queries.md) for ready-to-run queries.
+with CTE explanations. See [queries-insights-crs.md](queries-insights-crs.md) and [queries-olm.md](queries-olm.md) for ready-to-run queries.
 
 ## Collection Limits
 
@@ -20,6 +20,7 @@ const limit = 5
 - Component usage queries **undercount** if 6th+ CRs use different components
 - **No metadata is stored** indicating truncation occurred or total CR count
 - Cannot definitively identify which clusters hit the limit (can only detect clusters with exactly 5 CRs as "suspicious")
+- For an **uncapped** collector CR count, use `OPENSHIFTTELEMETRY_DB.MARTS.CLUSTER_USAGE_RESOURCES_SUM` ([queries-olm.md](queries-olm.md) query 6)
 
 **Detection query** (clusters that might be truncated):
 ```sql
@@ -42,7 +43,7 @@ HAVING COUNT(*) = 5;
 
 ## Fields Collected
 
-### ✅ Collected (Full Data)
+### Collected (Full Data)
 
 **Metadata**:
 - `metadata.name` - CR name
@@ -76,7 +77,7 @@ HAVING COUNT(*) = 5;
 - `status.version` - collector version
 - `status.scale` - scale information
 
-### ❌ NOT Collected (Stripped for Privacy)
+### NOT Collected (Stripped for Privacy)
 
 The top-level component **configuration definitions** are removed by `cleanCollectorSpecConfig()`:
 
