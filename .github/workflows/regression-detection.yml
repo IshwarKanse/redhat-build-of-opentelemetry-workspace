@@ -78,6 +78,14 @@ jobs:
             echo "ERROR: could not determine the latest upstream operator tag." >&2
             exit 1
           fi
+          # This value comes from a repo we do not control, and it reaches a job
+          # that holds contents: write. Git permits $ ` " ( ) ; | & in tag names,
+          # so an unvalidated tag is a shell-injection vector. Fail closed on
+          # anything that is not a plain semver tag.
+          if ! printf '%s' "$LATEST_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$'; then
+            echo "ERROR: upstream tag '$LATEST_TAG' is not a plain semver tag; refusing to use it." >&2
+            exit 1
+          fi
           echo "Latest upstream operator release: $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
@@ -128,8 +136,10 @@ jobs:
           # report is ever written. Wait indefinitely instead; the job's own
           # timeout-minutes and --max-budget-usd remain the real caps.
           CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0'
+          # A type: choice input, so GitHub already constrains it — passed via
+          # env anyway so no ${{ }} substitution happens inside a run: body.
+          METHOD: ${{ inputs.method }}
         run: |
-          METHOD="${{ inputs.method }}"
           ARGS=""
           if [ -n "$METHOD" ]; then
             ARGS="--method $METHOD"
@@ -170,12 +180,14 @@ jobs:
 
       - name: Post summary to job
         if: always()
+        env:
+          REPORT_DATE: ${{ steps.run-detection.outputs.report_date }}
+          LATEST_TAG: ${{ steps.release-check.outputs.latest_tag }}
         run: |
-          REPORT_DATE="${{ steps.run-detection.outputs.report_date }}"
           REPORT_FILE=$(ls reports/regression-detection-v*-${REPORT_DATE}.md 2>/dev/null | head -1)
           SUMMARY_FILE=$(ls reports/regression-summary-v*-${REPORT_DATE}.json 2>/dev/null | head -1)
 
-          echo "## Regression Detection — ${{ steps.release-check.outputs.latest_tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Regression Detection — ${LATEST_TAG}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           if [ -f "$SUMMARY_FILE" ]; then
@@ -222,6 +234,12 @@ jobs:
           path: /tmp/report-artifact
 
       - name: Copy only the expected report files into reports/
+        env:
+          # Passed via env, never interpolated into the script body: ${{ }} is
+          # substituted textually before bash parses it, so a hostile value
+          # would execute here.
+          REPORT_DATE: ${{ needs.detect-regressions.outputs.report_date }}
+          ARTIFACT_NAME: ${{ needs.detect-regressions.outputs.artifact_name }}
         run: |
           # Defense in depth: only ever stage the two known report filename
           # patterns for today's date, regardless of what else the artifact
@@ -231,13 +249,12 @@ jobs:
           # match by date suffix rather than an exact name. The date comes
           # from detect-regressions' output, not a fresh `date` call here, so
           # the two jobs can't disagree if they straddle UTC midnight.
-          REPORT_DATE="${{ needs.detect-regressions.outputs.report_date }}"
           shopt -s nullglob
           SUMMARY_MATCHES=(/tmp/report-artifact/regression-summary-v*-${REPORT_DATE}.json)
           REPORT_MATCHES=(/tmp/report-artifact/regression-detection-v*-${REPORT_DATE}.md)
           shopt -u nullglob
           if [ "${#SUMMARY_MATCHES[@]}" -ne 1 ] || [ "${#REPORT_MATCHES[@]}" -ne 1 ]; then
-            echo "::error::Expected exactly one regression-summary-v*-${REPORT_DATE}.json (found ${#SUMMARY_MATCHES[@]}) and exactly one regression-detection-v*-${REPORT_DATE}.md (found ${#REPORT_MATCHES[@]}) in artifact ${{ needs.detect-regressions.outputs.artifact_name }}" >&2
+            echo "::error::Expected exactly one regression-summary-v*-${REPORT_DATE}.json (found ${#SUMMARY_MATCHES[@]}) and exactly one regression-detection-v*-${REPORT_DATE}.md (found ${#REPORT_MATCHES[@]}) in artifact ${ARTIFACT_NAME}" >&2
             exit 1
           fi
           for f in "${SUMMARY_MATCHES[@]}" "${REPORT_MATCHES[@]}"; do
@@ -245,6 +262,10 @@ jobs:
           done
 
       - name: Commit generated reports
+        env:
+          # Via env, not ${{ }} in the body: this job holds contents: write and
+          # LATEST_TAG originates from an upstream repo we do not control.
+          LATEST_TAG: ${{ needs.detect-regressions.outputs.latest_tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -252,6 +273,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No report changes to commit."
           else
-            git commit -m "Add regression detection report for ${{ needs.detect-regressions.outputs.latest_tag }}"
+            git commit -m "Add regression detection report for ${LATEST_TAG}"
             git push origin HEAD:main
           fi
