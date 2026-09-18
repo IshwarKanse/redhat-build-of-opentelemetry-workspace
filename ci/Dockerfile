@@ -13,6 +13,16 @@ COPY . /tmp/redhat-build-of-opentelemetry-workspace
 
 WORKDIR /tmp/redhat-build-of-opentelemetry-workspace
 
+# Set the Go path and Go cache environment variables
+ENV GOPATH=/tmp/go
+ENV GOBIN=/tmp/go/bin
+ENV GOCACHE=/tmp/.cache/go-build
+ENV PATH=$PATH:$GOBIN
+
+# Create the /tmp/go/bin and build cache directories, and grant read and write permissions to all users
+RUN mkdir -p /tmp/go/bin $GOCACHE \
+    && chmod -R 777 /tmp/go/bin $GOPATH $GOCACHE
+
 # Install dependencies required by skill execution
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl git jq ca-certificates \
