@@ -60,14 +60,14 @@ No operator changes required. The log dedup processor is a pure in-memory proces
 ### Upstream Quality Assessment
 
 - **Open issues**: 1 enhancement request (#43647 — preserve first occurrence timestamp; the attempt in #47513 was closed unmerged). No open bugs.
-- **Performance concern**: #50851 flags an O(n^2) key lookup in shared `pkg/pdatautil` hashing (`writeMapHash`) used for deduplication keys. The cost is quadratic in the number of attributes of a single map (attribute width), not in log volume. No open fix PR exists (#50852 was closed unmerged). Not blocking for TP; monitor for records with very wide attribute maps. In contrib v0.161.0 (the 3.12 pin) the code is `pkg/pdatautil`; contrib removed that module after v0.161.0 (#51108) in favour of core `pdata/xpdata/xhash`, where the identical loop now lives, so a fix belongs in `open-telemetry/opentelemetry-collector` and is not part of 0.161.0 either way.
+- **Performance concern**: #50851 flags an O(n^2) key lookup in shared `pkg/pdatautil` hashing (`writeMapHash`) used for deduplication keys. The cost is quadratic in the number of attributes of a single map (attribute width), not in log volume. An earlier fix attempt (#50852) was closed unmerged; a fix is now proposed in core (`open-telemetry/opentelemetry-collector`, issue #15990, PR #15991, both open). Not blocking for TP; monitor for records with very wide attribute maps. In contrib v0.161.0 (the 3.12 pin) the code is `pkg/pdatautil`; contrib removed that module after v0.161.0 (#51108) in favour of core `pdata/xpdata/xhash`, where the identical loop now lives, so a fix belongs in `open-telemetry/opentelemetry-collector` and is not part of 0.161.0 either way.
 - **Maintenance**: Active — steady stream of feature PRs (OTTL conditions, multi-tenant `metadata_keys`, `include_fields`). Active codeowner (MikeGoldsmith).
 
 **Upstream tickets to consider fixing:**
 
 | Ticket | Summary | Priority |
 |---|---|---|
-| #50851 | `pkg/pdatautil` O(n^2) key lookup in `writeMapHash` (moved to core `xpdata/xhash` after v0.161.0) | Medium — affects dedup performance for wide attribute maps |
+| #50851 | `pkg/pdatautil` O(n^2) key lookup in `writeMapHash` (moved to core `xpdata/xhash` after v0.161.0; fix proposed in core issue #15990, PR #15991) | Medium — affects dedup performance for wide attribute maps |
 | #43647 | Preserve first occurrence timestamp | Low — enhancement, not correctness |
 
 ---
@@ -207,15 +207,15 @@ receivers:
 
 ### Operator Improvements (3.12)
 
-**[PLANNED: needs TRACING ticket]** Register a receiver parser for `webhook_event` (deprecated alias `webhookevent`) in the operator's component registry (`internal/components/receivers/helpers.go`), as a single-port parser with a default port of 8088.
+**[PLANNED: TRACING-6827]** Register a receiver parser for `webhook_event` (deprecated alias `webhookevent`) in the operator's component registry (`internal/components/receivers/helpers.go`), as a single-port parser with a default port of 8088.
 
 Today the operator handles the receiver through its generic fallback parser, which already derives a Service port from the configured `endpoint` (which the receiver requires). Registering the parser adds:
 
-- A default endpoint (`0.0.0.0:8088`) injected when `endpoint` is omitted. This default is chosen by the operator, not by the receiver, and `splunk_hec` already uses 8088 — the upstream issue decides whether to keep it or to register the parser without a default.
+- A default endpoint (`0.0.0.0:8088`) injected when `endpoint` is omitted. This default is chosen by the operator, not by the receiver, and `splunk_hec` already uses 8088 — the upstream PR offers to drop the default and register the parser without one if the maintainers prefer.
 - The OpenShift TLS profile defaults applied to a `tls:` block.
 - Resolution of the deprecated alias `webhookevent`.
 
-The change is about 6 lines plus tests. It is made **upstream first** (`open-telemetry/opentelemetry-operator`); the product picks it up through the `rhosdt-x.y` release sync, with no downstream patch.
+The change is about 6 lines plus tests. It is made **upstream first** (`open-telemetry/opentelemetry-operator`, PR #5631, open); the product picks it up through the `rhosdt-x.y` release sync, with no downstream patch.
 
 ### GA Blockers
 
