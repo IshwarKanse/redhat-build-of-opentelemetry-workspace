@@ -60,14 +60,14 @@ No operator changes required. The log dedup processor is a pure in-memory proces
 ### Upstream Quality Assessment
 
 - **Open issues**: 1 enhancement request (#43647 — preserve first occurrence timestamp; the attempt in #47513 was closed unmerged). No open bugs.
-- **Performance concern**: #50851 flags an O(n^2) key lookup in shared `pkg/pdatautil` hashing (`writeMapHash`) used for deduplication keys. The cost is quadratic in the number of attributes of a single map (attribute width), not in log volume. No open fix PR exists (#50852 was closed unmerged). Not blocking for TP; monitor for records with very wide attribute maps.
+- **Performance concern**: #50851 flags an O(n^2) key lookup in shared `pkg/pdatautil` hashing (`writeMapHash`) used for deduplication keys. The cost is quadratic in the number of attributes of a single map (attribute width), not in log volume. No open fix PR exists (#50852 was closed unmerged). Not blocking for TP; monitor for records with very wide attribute maps. In contrib v0.161.0 (the 3.12 pin) the code is `pkg/pdatautil`; contrib removed that module after v0.161.0 (#51108) in favour of core `pdata/xpdata/xhash`, where the identical loop now lives, so a fix belongs in `open-telemetry/opentelemetry-collector` and is not part of 0.161.0 either way.
 - **Maintenance**: Active — steady stream of feature PRs (OTTL conditions, multi-tenant `metadata_keys`, `include_fields`). Active codeowner (MikeGoldsmith).
 
 **Upstream tickets to consider fixing:**
 
 | Ticket | Summary | Priority |
 |---|---|---|
-| #50851 | `pkg/pdatautil` O(n^2) key lookup in `writeMapHash` | Medium — affects dedup performance for wide attribute maps |
+| #50851 | `pkg/pdatautil` O(n^2) key lookup in `writeMapHash` (moved to core `xpdata/xhash` after v0.161.0) | Medium — affects dedup performance for wide attribute maps |
 | #43647 | Preserve first occurrence timestamp | Low — enhancement, not correctness |
 
 ---
