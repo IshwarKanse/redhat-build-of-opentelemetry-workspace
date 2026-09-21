@@ -22,7 +22,7 @@ All repos use a **fork-based workflow**:
 
 ### Auto-Push Spec PRs
 
-After brainstorming writes and commits a spec change, **auto-push and open a PR** if the diff only touches spec/docs files. The PR is labeled `kind/design` for easy filtering — a human merges it.
+After brainstorming writes and commits a spec change, **auto-push and open a PR** if the diff only touches spec/docs files. The PR is identifiable by its `spec/` branch prefix (`gh pr list --search "head:spec/"`) — a human merges it.
 
 **Spec-only pattern:** `.ai/spec/**`, `docs/superpowers/specs/**`. Never include `AGENTS.md`, `CLAUDE.md`, or any other file — changes to agent instructions or non-spec files always require human review.
 
@@ -40,11 +40,10 @@ After brainstorming writes and commits a spec change, **auto-push and open a PR*
 3. Detect the fork remote: get the authenticated GitHub username (`gh api user -q .login`), then find the remote whose push URL contains that username (e.g. `git remote -v | grep push | grep <username>`). Extract `<fork-remote>` name and `<fork-user>` from its URL. If no matching remote is found, stop and tell the user.
 4. Create a branch: `spec/<TRACING-XXXX>-<topic>` (use `TRACING-0000` when there is no Jira ticket)
 5. Push: `git push <fork-remote> spec/<branch>`
-6. Open the PR with the `spec-only` label:
+6. Open the PR against `rhobs/redhat-build-of-opentelemetry-workspace` (do not pass `--label`; the repo has no `kind/design` label):
    ```
-   gh pr create --repo openshift/ols --head <fork-user>:<branch> --base main \
-     --title "TRACING-XXXX <summary>" --body "Spec-only change, pre-push reviewed." \
-     --label kind/design
+   gh pr create --repo rhobs/redhat-build-of-opentelemetry-workspace --head <fork-user>:<branch> --base main \
+     --title "TRACING-XXXX <summary>" --body "Spec-only change, pre-push reviewed."
    ```
 7. Tell the user the PR is ready for review and provide the URL.
 
