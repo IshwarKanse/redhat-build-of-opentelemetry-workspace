@@ -77,7 +77,7 @@ All four collector modes are **GA**:
 
 | Ticket | Summary |
 |---|---|
-| [PLANNED: TRACING-6827] | Register `webhook_event` receiver parser in `internal/components/receivers/helpers.go` with default port 8088 and deprecated alias `webhookevent`. The operator already derives a Service port from the receiver's `endpoint`; registering the parser adds a default endpoint when `endpoint` is omitted, the OpenShift TLS profile defaults for `tls:`, and the alias. Upstream change first (`open-telemetry/opentelemetry-operator`), reaching the product via the `rhosdt-x.y` release sync. See `what/collector-3.12-components.md`. |
+| [PLANNED: TRACING-6827] | Register `webhook_event` receiver parser in `internal/components/receivers/helpers.go` without a default port (like `tcp_log` and `udp_log`) and with deprecated alias `webhookevent`. The receiver requires `endpoint` and has no default port, so the operator keeps deriving the Service port from it; registering the parser adds the alias and rejects a configuration that omits `endpoint` when the collector resource is admitted. It adds no default endpoint and no OpenShift TLS profile defaults for `tls:`. Upstream change first (`open-telemetry/opentelemetry-operator`), reaching the product via the `rhosdt-x.y` release sync. See `what/collector-3.12-components.md`. |
 
 ## Constraints
 

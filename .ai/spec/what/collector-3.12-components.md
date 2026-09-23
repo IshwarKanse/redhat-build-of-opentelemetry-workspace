@@ -207,13 +207,14 @@ receivers:
 
 ### Operator Improvements (3.12)
 
-**[PLANNED: TRACING-6827]** Register a receiver parser for `webhook_event` (deprecated alias `webhookevent`) in the operator's component registry (`internal/components/receivers/helpers.go`), as a single-port parser with a default port of 8088.
+**[PLANNED: TRACING-6827]** Register a receiver parser for `webhook_event` (deprecated alias `webhookevent`) in the operator's component registry (`internal/components/receivers/helpers.go`), as a single-port parser **without a default port**, like `tcp_log` and `udp_log`.
 
-Today the operator handles the receiver through its generic fallback parser, which already derives a Service port from the configured `endpoint` (which the receiver requires). Registering the parser adds:
+Today the operator handles the receiver through its generic fallback parser, which already derives a Service port from the configured `endpoint` (which the receiver requires). The receiver has no default port upstream, so the operator does not invent one. A default of 8088 would clash with `splunk_hec`, which already uses that port: two receivers that both leave out `endpoint` would produce two Service ports with the same number, which Kubernetes rejects. The upstream review asked for the parser without a default, and the PR follows that. Registering the parser adds:
 
-- A default endpoint (`0.0.0.0:8088`) injected when `endpoint` is omitted. This default is chosen by the operator, not by the receiver, and `splunk_hec` already uses 8088 — the upstream PR offers to drop the default and register the parser without one if the maintainers prefer.
-- The OpenShift TLS profile defaults applied to a `tls:` block.
 - Resolution of the deprecated alias `webhookevent`.
+- Rejection of a configuration that omits `endpoint` when the collector resource is admitted (`port should not be empty`), instead of a collector that is created and then fails to start.
+
+Not added: a default endpoint, and the OpenShift TLS profile defaults for a `tls:` block. The operator applies those defaults only to parsers that have a default port, which is also why `tcp_log` and `udp_log` do not get them. Users set `endpoint`, and `tls:` if they need it, explicitly.
 
 The change is about 6 lines plus tests. It is made **upstream first** (`open-telemetry/opentelemetry-operator`, PR #5631, open); the product picks it up through the `rhosdt-x.y` release sync, with no downstream patch.
 
