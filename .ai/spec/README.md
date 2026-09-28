@@ -1,6 +1,6 @@
 # Red Hat Build of OpenTelemetry — Specifications
 
-Red Hat build of OpenTelemetry (RHOSDT) is an OpenTelemetry distribution for OpenShift. It packages the upstream OpenTelemetry Collector, Operator, and auto-instrumentation into a supported, FIPS-compliant product distributed via OLM. These specs cover the product's behavioral rules and codebase navigation across all six repositories in the workspace.
+Red Hat build of OpenTelemetry (RHOSDT) is an OpenTelemetry distribution for OpenShift. It packages the upstream OpenTelemetry Collector, Operator, and auto-instrumentation into a supported, FIPS-compliant product distributed via OLM. These specs cover the product's behavioral rules and codebase navigation across the repositories in the workspace, plus the workspace's own CI/automation tooling (e.g. `deploy-periodic-agent`, which spans this repo and `openshift/release`).
 
 ## Structure
 
@@ -11,7 +11,7 @@ Red Hat build of OpenTelemetry (RHOSDT) is an OpenTelemetry distribution for Ope
 
 ## Scope
 
-**Covered:** The OpenTelemetry Collector (core + contrib + Red Hat distro), the Kubernetes Operator (CRDs, controllers, auto-instrumentation, target allocator), productization via Konflux, and product documentation.
+**Covered:** The OpenTelemetry Collector (core + contrib + Red Hat distro), the Kubernetes Operator (CRDs, controllers, auto-instrumentation, target allocator), productization via Konflux, product documentation, and workspace CI/automation tooling that reaches into `openshift/release` (e.g. `deploy-periodic-agent`).
 
 **Out of scope:** Upstream OpenTelemetry SDK libraries, language-specific instrumentation library internals, Tempo/Jaeger backends, Cluster Observability Operator (COO).
 
@@ -34,6 +34,7 @@ AI agents. Content is optimized for precision and machine consumption.
 | Understand RHEL metering | `what/rhel-metering.md` |
 | Understand 3.12 new components | `what/collector-3.12-components.md` |
 | Understand periodic-agent deployment tooling | `what/deploy-periodic-agent.md` |
+| Navigate periodic-agent tooling code | `how/deploy-periodic-agent.md` |
 | Find which repo to edit | `how/repo-map.md` |
 | Understand repo layout | `how/project-structure.md` |
 | Understand the build pipeline | `how/build-pipeline.md` |
@@ -46,6 +47,7 @@ AI agents. Content is optimized for precision and machine consumption.
 | `what/collector.md`, `what/obi.md` | `how/repo-map.md` (Collector sections) |
 | `what/operator.md` | `how/repo-map.md` (Operator section) |
 | `what/productization.md` | `how/build-pipeline.md`, `how/repo-map.md` (Productization section) |
+| `what/deploy-periodic-agent.md` | `how/deploy-periodic-agent.md` |
 
 ## Conventions
 
