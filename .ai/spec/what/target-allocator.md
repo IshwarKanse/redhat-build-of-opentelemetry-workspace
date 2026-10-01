@@ -32,11 +32,12 @@ The Target Allocator is **GA** (promoted from TP in 3.9.0).
 
 11. mTLS can be configured between the target allocator and collector instances.
 12. `allowInsecureAuthSecrets` controls whether auth secrets can be transmitted without TLS.
+13. **[PLANNED: TRACING-6785]** When mTLS is enabled, the target allocator's HTTPS server adheres to the cluster TLS security profile (minimum version, cipher suites, and supported groups). mTLS is the only condition under which the target allocator serves TLS, so profile adherence is scoped to it. See `what/tls-profile.md`.
 
 ### Standalone CRD
 
-13. **GA**: The standalone TargetAllocator CRD (v1alpha1) allows managing target allocation independently of an OpenTelemetryCollector CR.
-14. It supports `globalConfig` and `scrapeConfigs` fields for direct Prometheus configuration.
+14. **GA**: The standalone TargetAllocator CRD (v1alpha1) allows managing target allocation independently of an OpenTelemetryCollector CR.
+15. It supports `globalConfig` and `scrapeConfigs` fields for direct Prometheus configuration.
 
 ## Configuration Surface
 

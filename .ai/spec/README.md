@@ -26,6 +26,7 @@ AI agents. Content is optimized for precision and machine consumption.
 | Understand the product | `what/system-overview.md` |
 | Understand the collector pipeline | `what/collector.md` |
 | Understand CRDs and the operator | `what/operator.md` |
+| Understand cluster TLS profile adherence | `what/tls-profile.md` |
 | Understand auto-instrumentation | `what/auto-instrumentation.md` |
 | Understand the OBI receiver (eBPF instrumentation) | `what/obi.md` |
 | Understand target allocation | `what/target-allocator.md` |
@@ -46,6 +47,7 @@ AI agents. Content is optimized for precision and machine consumption.
 | `what/system-overview.md` | `how/project-structure.md` |
 | `what/collector.md`, `what/obi.md` | `how/repo-map.md` (Collector sections) |
 | `what/operator.md` | `how/repo-map.md` (Operator section) |
+| `what/tls-profile.md` | `how/repo-map.md` (Operator and Collector sections) |
 | `what/productization.md` | `how/build-pipeline.md`, `how/repo-map.md` (Productization section) |
 | `what/deploy-periodic-agent.md` | `how/deploy-periodic-agent.md` |
 

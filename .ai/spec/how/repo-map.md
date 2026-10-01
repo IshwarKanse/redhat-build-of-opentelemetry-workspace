@@ -71,3 +71,4 @@ These features span multiple repos:
 | New CRD or API field | opentelemetry-operator, konflux-opentelemetry, openshift-docs |
 | Version bump (upstream rebase) | redhat-opentelemetry-collector, opentelemetry-operator (submodules in konflux-opentelemetry) |
 | New OCP version support | konflux-opentelemetry (new FBC catalog + Dockerfile) |
+| Cluster TLS profile adherence | opentelemetry-operator (profile fetch, operand injection, target allocator), opentelemetry-collector (`config/configtls` curve allowlist), openshift-docs |

@@ -53,7 +53,7 @@ All four collector modes are **GA**:
 
 ### TLS
 
-14. **GA**: The operator adheres to cluster TLS security profiles (introduced in 3.10.0).
+14. **GA**: The operator adheres to cluster TLS security profiles (introduced in 3.10.0). The operator's own webhook and metrics servers, the collector operands it generates, and the Target Allocator all honour the profile. See `what/tls-profile.md` for the full propagation rules, configuration surface, and the `groups` (curve preferences) gap tracked by TRACING-6785.
 
 ### Features Not Supported
 
