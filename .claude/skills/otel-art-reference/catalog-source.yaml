@@ -1,0 +1,12 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: art-otel
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: <REPLACE with quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc:TAG>
+  publisher: art
+  updateStrategy:
+    registryPoll:
+      interval: 10m0s
