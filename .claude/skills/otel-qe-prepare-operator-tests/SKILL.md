@@ -26,6 +26,8 @@ Two downstream forks exist:
 
 For `rhosdt-3.11+`, use the `openshift` fork. For older versions, use the `os-observability` fork.
 
+The OCP CI stage and downstream jobs (`otel-qe-ocp-ci-tests`) clone `openshift/open-telemetry-opentelemetry-operator` directly and run the tests from `rhosdt-<version>`. The modifications below only take effect in those jobs once they are pushed to that fork's `rhosdt-<version>` branch. Applying them in a local clone, or pushing them to the `os-observability` fork, does not change what CI runs.
+
 ```bash
 # For rhosdt-3.11+:
 git clone git@github.com:openshift/open-telemetry-opentelemetry-operator.git
@@ -52,9 +54,28 @@ git pull --rebase origin rhosdt-<version>
 
 The `rhosdt-<version>` branch must contain the following modifications for product testing:
 
+### Scope of the changes
+
+Limit every edit to `tests/`. The branch also holds the ART build inputs — `Dockerfile.art`, `Dockerfile.ta.art`, `bundle/art.yaml`, `bundle/image-references` and `bundle/opentelemetry-product.package.yaml` — which drive the product build. Test preparation must not change them.
+
 ### Additional e2e-otel Component Tests
 
 Copy the end-to-end tests for OpenTelemetry Collector components from [distributed-tracing-qe](https://github.com/openshift/distributed-tracing-qe/tree/main/tests/e2e-otel) to `tests/e2e-otel/`. These tests provide configuration blueprints and testing patterns for various OpenTelemetry receivers, processors, exporters, and extensions.
+
+### Additional UI Test (OpenShift Console)
+
+Copy `tests/e2e-otel-ui` from [distributed-tracing-qe](https://github.com/openshift/distributed-tracing-qe/tree/main/tests/e2e-otel-ui) to `tests/e2e-otel-ui/` unchanged, including `Dockerfile.playwright`. It verifies the OpenTelemetry Collector dashboard in the OpenShift console (Observe > Dashboards) with Playwright and is run by the `ui` stage job and the UI downstream job. From a distributed-tracing-qe clone: `git archive origin/main tests/e2e-otel-ui | tar -x -C <operator-repo>`.
+
+This repo's `.gitignore` ignores `package-lock.json`, but the test runs `npm ci` and needs `tests/e2e-otel-ui/collector-dashboard/ui/package-lock.json`. Add the same entries as distributed-tracing-qe to `.gitignore`, once per branch:
+
+```
+!tests/e2e-otel-ui/collector-dashboard/ui/package-lock.json
+tests/e2e-otel-ui/**/artifacts/
+tests/e2e-otel-ui/**/playwright-report/
+tests/e2e-otel-ui/**/test-results/
+```
+
+The existing `sed` for the community collector image below does not touch these files: their collectors use the operator's default image.
 
 ### Remove Hardcoded Community Collector Image
 
@@ -67,6 +88,8 @@ if [ -n "$FILES" ]; then
 fi
 ```
 
+The CI stage and downstream jobs run the branch as it is and do not apply this `sed`, so the result must be committed to the fork. `rhosdt-3.11` is already clean; run it again after copying new tests from distributed-tracing-qe, and push the result.
+
 ### Remove nodeAffinity from Target Allocator Tests
 
 Remove the `ingress-ready` nodeAffinity requirement from the following target allocator test files to allow tests to run on any node:
@@ -77,7 +100,7 @@ Remove the `ingress-ready` nodeAffinity requirement from the following target al
 
 ## Verify Modifications
 
-Confirm each modification above actually landed before running any tests — a silent no-op (an empty `tests/e2e-otel/` from a failed copy, a `sed` pattern that matched nothing, a stale `nodeAffinity` block) surfaces later as confusing test failures instead of an obvious setup error. Run all four checks and report each as pass/fail; if any fails, fix the corresponding step above and re-verify before proceeding:
+Confirm each modification above actually landed before running any tests — a silent no-op (an empty `tests/e2e-otel/` from a failed copy, a `sed` pattern that matched nothing, a stale `nodeAffinity` block) surfaces later as confusing test failures instead of an obvious setup error. Run all six checks and report each as pass/fail; if any fails, fix the corresponding step above and re-verify before proceeding:
 
 ```bash
 echo "=== e2e-otel tests copied ==="
@@ -96,6 +119,20 @@ if grep -n "ingress-ready" \
     tests/e2e-targetallocator-cr/01-install.yaml \
     tests/e2e-targetallocator/targetallocator-features/00-assert.yaml \
     tests/e2e-targetallocator/targetallocator-features/00-install.yaml; then
+  echo FAIL
+else
+  echo PASS
+fi
+
+echo "=== UI test copied and its lock file is not ignored ==="
+if [ -f tests/e2e-otel-ui/collector-dashboard/chainsaw-test.yaml ] && ! git check-ignore -q tests/e2e-otel-ui/collector-dashboard/ui/package-lock.json; then
+  echo PASS
+else
+  echo FAIL
+fi
+
+echo "=== ART build inputs untouched ===
+if git diff --name-only | grep -E '^(Dockerfile\.art|Dockerfile\.ta\.art|bundle/)'; then
   echo FAIL
 else
   echo PASS

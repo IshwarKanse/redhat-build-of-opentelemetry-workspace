@@ -65,7 +65,7 @@ This is a fuzzy text search (e.g. "3.1" also matches "3.11"), so filter results 
 - **One exact match, but Closed:** treat as zero matches — never reuse or modify a Closed Epic. Create a new one (below), and tell the user the closed Epic's key in case that's unexpected.
 - **Zero exact matches (or the only match is Closed):** create with `issueTypeName: Epic`, `summary: [QE] Verify RHOSDT {version} OTEL release`, `assignee_account_id`, `additional_fields: {customfield_10028: 3, customfield_10464: {id: "10608"}}`, and this description (fill in `{version}` and payload links; real newlines, not `\n`):
 
-Pull the local `konflux` repo to latest `main` first (`git -C konflux checkout main && git -C konflux pull --ff-only origin main`) — payload files land close to release, so a stale checkout can miss one. Then check `konflux/release-payloads/` for both `otel-stage-{version}.yaml` and `otel-stage-fbc-{version}.yaml` (FBC lands later — only include the bullet for files that actually exist).
+Pull the local `konflux` repo to latest `main` first (`git -C konflux checkout main && git -C konflux pull --ff-only origin main`) — payload files land close to release, so a stale checkout can miss one. OTEL is built by ART, so it has no release payload; its FBC images come from `bash .claude/skills/otel-art-reference/get-fbc-images.sh {version}`. Tempo still has a Konflux payload — check `konflux/release-payloads/` for `tempo-stage-{version}.yaml` and only include its bullet if the file exists.
 
 ```
 ### Operator Versions
@@ -74,15 +74,15 @@ Pull the local `konflux` repo to latest `main` first (`git -C konflux checkout m
 
 ### Release Payload
 
-* https://gitlab.cee.redhat.com/distributed-tracing/konflux/-/blob/main/release-payloads/otel-stage-{version}.yaml
-* https://gitlab.cee.redhat.com/distributed-tracing/konflux/-/blob/main/release-payloads/otel-stage-fbc-{version}.yaml (FBC — add once published)
+* OTEL (ART): FBC catalog images in https://quay.io/repository/redhat-user-workloads/ocp-art-tenant/art-fbc?tab=tags (filter `rhosdt-{version}`)
+* Tempo (Konflux, only if the file exists): https://gitlab.cee.redhat.com/distributed-tracing/konflux/-/blob/main/release-payloads/tempo-stage-{version}.yaml
 
 Before running the tests, prepare the release branch and Konflux integration tests:
 
 /otel-qe-prepare-operator-tests
 /otel-qe-prepare-konflux-tests
 
-**Testing order:** the Konflux E2E and Upgrade Integration Test Jobs Task must pass before the Tests on Supported OCP Versions Task — both use the same IIB/bundle images, so fix Konflux failures first.
+**Testing order:** the Konflux E2E and Upgrade Integration Test Jobs Task must pass before the Tests on Supported OCP Versions Task — fix Konflux failures first.
 
 Each Task below has instructions to run its tests, including cluster setup where needed.
 
@@ -98,7 +98,7 @@ Each Task below has instructions to run its tests, including cluster setup where
 
 Query `parent = {epic key}`, including assignee, story points (`customfield_10028`), and activity type (`customfield_10464`).
 
-- Any child whose issue type is **not** Task: flag it in the final report; don't delete, convert, or touch it — that's a human decision.
+- Any child whose issue type is **not** Task: flag it in the final report; don't delete, convert, or touch it — that's a human decision. The same goes for a Task whose summary matches no template below (e.g. the retired manual dashboard Task): leave it and name it in the report.
 - Note existing Tasks' summaries and assignee/SP/activity type so Step 5 can skip duplicates but still fix up those fields.
 
 ### Step 5: Create the Missing Tasks and Set Fields
@@ -111,12 +111,12 @@ For each template below, the full summary is `[QE] RHOSDT {version} {title}`.
 #### 1. Tests on Supported OCP Versions ({MIN}-{MAX})
 
 ```
-Goal: Verify the OTEL operator on all supported OCP versions ({MIN}-{MAX}), the ARM/FIPS variants, and disconnected-mirroring readiness. Prerequisite: the Konflux E2E and Upgrade Integration Test Jobs Task must pass first — see Testing order above.
+Goal: Verify the OTEL operator on all supported OCP versions ({MIN}-{MAX}), the ARM/FIPS variants, the OpenTelemetry Collector dashboard in the OpenShift console (the UI job), and disconnected-mirroring readiness. Prerequisite: the Konflux E2E and Upgrade Integration Test Jobs Task must pass first — see Testing order above.
 
-1. Use the `otel-qe-ocp-ci-tests` skill to create/update the PR to `openshift/release` with the IIB mappings from the Konflux release payload for {version}.
+1. Use the `otel-qe-ocp-ci-tests` skill to create/update the PR to `openshift/release` with the digest-pinned ART FBC catalog images for {version}.
 2. Run the `otel-qe-verify-disconnected-mirroring` skill as a fast, no-cluster pre-check for disconnected mirroring correctness. Have it comment the result on this issue.
-3. Comment `/pj-rehearse {one-job-name}` with just one job first and wait for it to pass — catches a broken IIB/config early.
-4. Once that passes, comment `/pj-rehearse {remaining-job-list}` for the rest — one PR covers every OCP version, ARM/FIPS, and the disconnected job (different project dir, same PR), all triggered together.
+3. Comment `/pj-rehearse {one-job-name}` with just one job first and wait for it to pass — catches a broken FBC/config early.
+4. Once that passes, comment `/pj-rehearse {remaining-job-list}` for the rest — one PR covers every OCP version, ARM/FIPS, the UI job, and the disconnected job (different project dir, same PR), all triggered together.
 5. For any failing job, check its `openshift-observability-qe-agent` step first (see `otel-qe-ocp-ci-tests`) — it may have already diagnosed and fixed it. Re-run until all jobs pass.
 6. Merge the PR.
 ```
@@ -140,15 +140,7 @@ Goal: Verify the Konflux CI integration test pipelines pass for {version}. Compl
 4. Re-run any failed pipeline via `kubectl label --overwrite -n rhosdt-tenant snapshot <name> test.appstudio.openshift.io/run=all` or the Konflux UI, and investigate failures.
 ```
 
-#### 4. Test OpenTelemetry Collector and APM Dashboard `[manual]`
-
-```
-Goal: Verify the OpenTelemetry collector dashboards on OpenShift.
-
-Use the `otel-qe-collector-dashboard-manual` skill to deploy the collector and telemetrygen, and verify the dashboard shows metrics data.
-```
-
-#### 5. Verify Release Notes and Documentation `[manual]`
+#### 4. Verify Release Notes and Documentation `[manual]`
 
 ```
 Goal: Verify the release notes and product documentation for {version} are accurate.
@@ -158,7 +150,7 @@ Goal: Verify the release notes and product documentation for {version} are accur
 3. Coordinate with the docs team to resolve any gaps.
 ```
 
-#### 6. Verify CVE and Bug Fixes `[manual]`
+#### 5. Verify CVE and Bug Fixes `[manual]`
 
 ```
 Goal: Verify the CVE and bug fixes listed in the release payload are actually fixed.

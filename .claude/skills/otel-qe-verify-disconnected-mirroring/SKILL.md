@@ -34,9 +34,9 @@ registry required — in seconds.
 in the separate `openshift/release` repo — see "Reference files" below)
 does three things via `cucushift-installer-rehearse-gcp-ipi-disconnected`:
 
-1. `distributed-tracing-install-disconnected` — runs `oc-mirror --v1` against the OTEL/Tempo IIB
-   images, mirroring the index, bundle, and every `spec.relatedImages` entry, then applies the
-   generated `ImageContentSourcePolicy` + `CatalogSource`.
+1. `distributed-tracing-install-disconnected` — runs `oc-mirror --v1` against the OTEL catalog (the
+   ART FBC image) and the Tempo IIB, mirroring the index, bundle, and every `spec.relatedImages`
+   entry, then applies the generated `ImageContentSourcePolicy` + `CatalogSource`.
 2. `install-operators` — installs the operators from the mirrored catalog sources.
 3. `distributed-tracing-tests-disconnected` — runs chainsaw e2e tests to confirm collector pods
    actually come up.
@@ -53,15 +53,33 @@ job — see "What this does not cover" below.
    - **Live cluster** (fastest — use this right after `otel-qe-deploy-stage-build` or any manual install).
      Discover the namespace and CSV name together first (avoids guessing a namespace):
      ```bash
-     oc get csv -A | grep -i -E 'opentelemetry|tempo'
+     oc get csv -A -o json | jq -r '.items[] | select(.metadata.name|test("opentelemetry|tempo")) | select(.metadata.labels["olm.copiedFrom"]|not) | .metadata.namespace + " " + .metadata.name'
      oc get csv <csv-name> -n <namespace> -o yaml > /tmp/csv.yaml
      ```
+     A plain `oc get csv -A | grep` lists the operator's copy in every namespace when it was installed for all namespaces; the `olm.copiedFrom` filter keeps only the install namespace.
    - **A specific bundle image / release** (validates a build without needing a cluster):
-     1. Resolve the bundle image digest from the **stage** release-payload snapshot:
-        `konflux/release-payloads/otel-stage-<version>.yaml` (or `tempo-stage-<version>.yaml`),
-        under `spec.components[] | select(.name == "otel-bundle-main").containerImage` (or
-        `tempo-bundle-main`). The `*-prod-*.yaml` files are Release *requests* and don't carry a
-        `spec.components` snapshot until they're actually released — use the stage file.
+     1. Resolve the bundle image digest.
+        - **OTEL** — from the ART FBC catalog for the OCP version of interest (4.16 for the
+          disconnected CI job). Get the catalog image with
+          `bash .claude/skills/otel-art-reference/get-fbc-images.sh <version>` (it is public, no
+          credentials needed), extract its `/configs`, and read the newest bundle:
+          ```bash
+          FBC=quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc:rhosdt-<version>__v<ocp>__opentelemetry-rhel9-operator
+          oc image extract "$FBC" --filter-by-os=linux/amd64 --path /configs/:/tmp/fbc --confirm
+          opm render /tmp/fbc/opentelemetry-product -o json \
+            | jq -r 'select(.schema=="olm.bundle") | [.name,.image] | @tsv' | sort -V | tail -1
+          ```
+          The result is `registry.redhat.io/rhosdt/opentelemetry-operator-bundle@sha256:…`. That
+          name only resolves on the stage registry until the release is published: pull the same
+          digest from `registry.stage.redhat.io/rhosdt/opentelemetry-operator-bundle@sha256:…`
+          (`skopeo login registry.stage.redhat.io` with the team's stage credentials first; on macOS
+          add `--override-os linux --override-arch amd64` to `skopeo copy`). The
+          catalog does not embed the CSV, so the bundle image has to be pulled.
+        - **Tempo** — still from the Konflux stage release-payload snapshot
+          `konflux/release-payloads/tempo-stage-<version>.yaml`, under
+          `spec.components[] | select(.name == "tempo-bundle-main").containerImage`. The
+          `*-prod-*.yaml` files are Release *requests* and don't carry a `spec.components`
+          snapshot until they're actually released — use the stage file.
      2. Extract the CSV from that bundle image using the same skopeo-copy + untar approach as
         `konflux-opentelemetry/scripts/validate-bundle-sdk.sh` (a separate repo — see "Reference
         files" below; look at its `skopeo copy` / blob-extraction steps): copy the image to an OCI dir, untar the
@@ -98,8 +116,9 @@ failing.
 ## Optional deeper verification
 
 - **Bundle image only** (not a live-cluster CSV): also run the existing official validator for
-  extra confidence — this is the same gate Konflux CI runs before a bundle can be released, so
-  this skill and the release pipeline will never disagree:
+  extra confidence — this is the `operator-sdk` validator the legacy Konflux pipeline ran on
+  bundles. ART releases are gated by the Enterprise Contract policy instead, so treat a pass as
+  an extra check, not as a copy of that gate:
   ```bash
   BUNDLE_IMAGE=<bundle-image>@sha256:<digest> \
     bash konflux-opentelemetry/scripts/validate-bundle-sdk.sh
@@ -107,11 +126,16 @@ failing.
   (Requires a `microdnf`-based environment per that script, or adapt to `skopeo`/`operator-sdk`
   being available locally — see the script for what it installs.)
 
-- **Staleness check**: confirm each `relatedImages` digest is still pullable (Konflux
-  `quay.io/redhat-pending/...` staging refs can expire before a real mirror run):
+- **Staleness check**: confirm each `relatedImages` digest is still pullable. ART bundles name
+  `registry.redhat.io/rhosdt/...` images that exist only on `registry.stage.redhat.io/rhosdt`
+  until the release is published, so check the stage copy (same digest; log in with
+  `skopeo login registry.stage.redhat.io` first). `--raw` is needed on macOS, where the
+  multi-arch index has no darwin entry:
   ```bash
-  skopeo inspect docker://<image>@sha256:<digest> >/dev/null && echo OK || echo STALE
+  skopeo inspect --raw docker://registry.stage.redhat.io/rhosdt/<name>@sha256:<digest> >/dev/null && echo OK || echo STALE
   ```
+  Tempo's Konflux `quay.io/redhat-pending/...` staging refs can expire before a real mirror
+  run; check those the same way.
 
 ## What this does not cover
 
@@ -134,4 +158,4 @@ These all live in **separate repos** cloned alongside this workspace (see the to
 - Install step (in `openshift/release`): `ci-operator/step-registry/distributed-tracing/install/disconnected/distributed-tracing-install-disconnected-commands.sh`
 - Test step (in `openshift/release`): `ci-operator/step-registry/distributed-tracing/tests/disconnected/distributed-tracing-tests-disconnected-commands.sh`
 - Konflux bundle validator (in `os-observability/konflux-opentelemetry`): `scripts/validate-bundle-sdk.sh`
-- CSV patch template, where `RELATED_IMAGE_*` env vars come from (in `os-observability/konflux-opentelemetry`): `bundle-patch/patch_csv.yaml`
+- CSV patch template, where `RELATED_IMAGE_*` env vars come from in the legacy Konflux flow (in `os-observability/konflux-opentelemetry`): `bundle-patch/patch_csv.yaml`

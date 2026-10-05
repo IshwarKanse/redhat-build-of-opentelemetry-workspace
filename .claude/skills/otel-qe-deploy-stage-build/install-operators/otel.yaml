@@ -1,24 +1,28 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-   name: konflux-catalog-otel
+   name: art-catalog-otel
    namespace: openshift-marketplace
 spec:
    sourceType: grpc
-   image: <OTEL_IIB_IMAGE>
-   displayName: Konflux Catalog OTEL
+   image: <OTEL_FBC_IMAGE>
+   displayName: ART Catalog OTEL
    publisher: grpc
 ---
-apiVersion: project.openshift.io/v1
-kind: Project
+# The e2e suites (tests/e2e, tests/e2e-openshift, ...) and the CI jobs expect the operator in
+# opentelemetry-operator-system, with the cluster-monitoring label for its metrics.
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: openshift-opentelemetry-operator
+  name: opentelemetry-operator-system
+  labels:
+    openshift.io/cluster-monitoring: "true"
 ---
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: openshift-opentelemetry-operator
-  namespace: openshift-opentelemetry-operator
+  name: opentelemetry-operator-system
+  namespace: opentelemetry-operator-system
 spec:
   upgradeStrategy: Default
 ---
@@ -26,10 +30,10 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: opentelemetry-product
-  namespace: openshift-opentelemetry-operator
+  namespace: opentelemetry-operator-system
 spec:
   channel: stable
   installPlanApproval: Automatic
   name: opentelemetry-product
-  source: konflux-catalog-otel
+  source: art-catalog-otel
   sourceNamespace: openshift-marketplace
