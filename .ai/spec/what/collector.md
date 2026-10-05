@@ -37,7 +37,6 @@ The distro includes 15 receivers in source. Support levels per documentation:
 | OTLP JSON File | **TP** | |
 | Journald | **TP** | |
 | Kubernetes Cluster | **TP** | |
-| Webhook Event | **TP** | Added in 3.11.0. Beta upstream for logs. |
 | OBI | **TP** | Added in 3.11.0. eBPF-based zero-code instrumentation. See `what/obi.md`. |
 
 ### Exporters
@@ -143,6 +142,7 @@ The distro includes 10 extensions in source. Support levels per documentation:
 | Signature Validation | Processor | **[PLANNED: TRACING-6499]** TP | Validates non-repudiation signatures on incoming spans. See `what/signing.md`. |
 | Log Deduplication | Processor | **[PLANNED: TRACING-6697]** TP | Aggregates identical logs over a time interval. See `what/collector-3.12-components.md`. |
 | Syslog | Exporter | **[PLANNED: TRACING-6788]** TP | Exports logs via syslog protocol (RFC 5424/3164). See `what/collector-3.12-components.md`. |
+| Webhook Event | Receiver | **[PLANNED: TRACING-6641]** TP | Receives logs over HTTP webhooks. New in 3.12: it is not in any 3.11 build (`manifest.yaml`, release notes and docs have no entry). See `what/collector-3.12-components.md`. |
 
 ### Excluded Components (Evaluated and Rejected)
 
