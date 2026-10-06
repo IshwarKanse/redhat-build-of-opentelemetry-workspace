@@ -56,7 +56,7 @@ https://gcsweb-qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/qe-priva
 - `{job-name}`: Full job name with `rehearse-{pr-number}-` prefix
 - `{build-id}`: Unique build ID (e.g., `2092950588802207744`)
 - `{test-name}`: The `as:` field from CI config (e.g., `opentelemetry-stage-tests`)
-- `{step-name}`: The `ref:` field from CI config (e.g., `distributed-tracing-tests-opentelemetry-stage`)
+- `{step-name}`: The `ref:` field from CI config (e.g., `distributed-tracing-tests-opentelemetry-stage`). For the `ui` variant it is `distributed-tracing-tests-opentelemetry-ui-stage`, whose artifacts hold `junit_console_ui_otel_*.xml`, `chainsaw-output.log`, the Playwright report, traces and screenshots
 
 **Finding the Build ID:**
 

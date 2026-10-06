@@ -4,9 +4,9 @@ description: >
   Reference skill for ART (Automated Release Tool) build and productization of
   Red Hat build of OpenTelemetry. Use when the user asks about ART builds, ART
   Konflux tenant configuration, image locations in ART pipelines, or release
-  promotion. Not for the legacy os-observability Konflux flow — see
-  otel-qe-deploy-stage-build, otel-qe-prepare-konflux-tests, and
-  otel-qe-ocp-ci-tests for those.
+  promotion. Not for the legacy os-observability Konflux flow (still used for
+  Tempo) — see otel-qe-prepare-konflux-tests for that. QE use of the ART
+  builds is in otel-qe-ocp-ci-tests and otel-qe-deploy-stage-build.
 argument-hint: "[question about ART/Konflux builds or configuration]"
 ---
 
@@ -87,10 +87,11 @@ Advisories:
 
 ## FBC images
 
-Use [get-fbc-images.sh](get-fbc-images.sh) to list the latest FBC image for each supported OCP version. The floating tag `rhosdt-<ver>__v<ocp>__opentelemetry-rhel9-operator` always points to the latest build; tags with a `__g<hash>` suffix are pinned to a specific git commit.
+Use [get-fbc-images.sh](get-fbc-images.sh) to list the latest FBC image for each supported OCP version. It reads only active tags and follows the Quay pagination. The floating tag `rhosdt-<ver>__v<ocp>__opentelemetry-rhel9-operator` always points to the latest build; tags with a `__g<hash>` suffix are pinned to a specific git commit, but ART re-pushes those as well.
 ```bash
 ./get-fbc-images.sh 3.11
 ```
+The images are multi-arch. Pin by digest (`image_by_digest`) for CI and for reproducing a result, because only the digest does not change; use the floating tag (`image`) for ad-hoc installs on a cluster.
 
 ## Release Process
 
@@ -104,5 +105,5 @@ See [RELEASE.md](RELEASE.md) for the release process (draft — will be complete
    ```bash
    ./setup-stage-credentials.sh <stage-registry-auth-token>
    ```
-1. **Apply the IDMS** — [idms.yaml](idms.yaml) mirrors `registry.redhat.io/rhosdt` to `registry.stage.redhat.io/rhosdt`. Remove any per-image IDMS from `otel-qe-deploy-stage-build` to avoid conflicts.
-1. **Create the CatalogSource** — use [catalog-source.yaml](catalog-source.yaml) as a template, replacing the `image` field with the FBC image from step 1. See `otel-qe-deploy-stage-build`'s `install-operators/otel.yaml` for a full example with Project, OperatorGroup, and Subscription.
+1. **Apply the IDMS** — [idms.yaml](idms.yaml) mirrors `registry.redhat.io/rhosdt` to `registry.stage.redhat.io/rhosdt`. Remove any per-image OTEL mirror set left from the old Konflux flow to avoid conflicts. OCP 4.12 has no IDMS CRD; see `otel-qe-deploy-stage-build` for the `ImageContentSourcePolicy` equivalent.
+1. **Create the CatalogSource** — use [catalog-source.yaml](catalog-source.yaml) as a template, replacing the `image` field with the FBC image from `get-fbc-images.sh` for the cluster's OCP version. See `otel-qe-deploy-stage-build`'s `install-operators/otel.yaml` for a full example with Project, OperatorGroup, and Subscription.

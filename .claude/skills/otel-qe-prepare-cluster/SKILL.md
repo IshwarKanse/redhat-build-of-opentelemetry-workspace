@@ -25,9 +25,18 @@ If you're not already connected to an OpenShift cluster, you can either use:
 5. Wait approximately **1 hour** for the cluster to be provisioned.
 6. ClusterBot will send you the kubeconfig/login credentials once the cluster is ready.
 
-## Get FBC fragment images or OLM bundle from the Konflux repo
-The user must provide the release version (e.g. 3.10.0). Read `konflux/release-payloads/otel-stage-<version>.yaml` (and `tempo-stage-<version>.yaml` for Tempo) from the locally-cloned `konflux` repo — look for the `containerImage`/`index_image` field under the relevant component.
+## Get the ART FBC image for OTEL
+The user must provide the release version (e.g. 3.11). Run:
 
-The FBC fragments work only on amd64 clusters, on arm64 clusters or IBM P/Z clusters the OLM bundle must be used.
+```bash
+bash .claude/skills/otel-art-reference/get-fbc-images.sh <version>
+```
 
-If the files don't exist for the given version, ask the user for the correct version or the FBC fragment images directly.
+It lists the ART FBC catalog image for each supported OCP version. Pick the entry whose `ocp_version` matches the cluster (`oc get clusterversion version -o jsonpath='{.status.desired.version}'`, y-stream only, e.g. `v4.20`). The image is multi-arch, so the same entry works on amd64, arm64, ppc64le and s390x clusters. If the version has no entry, ask the user for the correct version.
+
+## Get the Tempo images from the Konflux repo
+Tempo is not built by ART yet. Read `konflux/release-payloads/tempo-stage-<version>.yaml` from the locally-cloned `konflux` repo — look for the `containerImage`/`index_image` field under the relevant component.
+
+The Tempo FBC fragment works only on amd64 clusters; on arm64 clusters or IBM P/Z clusters the Tempo OLM bundle must be used.
+
+If the file doesn't exist for the given version, ask the user for the correct version or the Tempo FBC fragment image directly.
