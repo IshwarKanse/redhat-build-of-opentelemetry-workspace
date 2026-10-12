@@ -56,9 +56,9 @@ Modify the manifests in a temporary copy before applying. Do not modify the orig
 The ART FBC is multi-arch (amd64, arm64, ppc64le, s390x), so one path covers amd64, arm64 and IBM P and Z.
 
 1. Get the cluster's OCP version: `oc get clusterversion version -o jsonpath='{.status.desired.version}'`. The FBC is per OCP y-stream (e.g. `4.20`).
-2. List the FBC images for the release and pick the entry whose `ocp_version` matches (`v4.20`):
+2. List the FBC images for the release (the argument is the ART version, e.g. `0.158`) and pick the entry whose `ocp_version` matches (`v4.20`):
    ```bash
-   bash .claude/skills/otel-art-reference/get-fbc-images.sh <version>
+   bash .claude/skills/otel-art-reference/get-fbc-images.sh <art-version>
    ```
    If there is no entry for the cluster's version, stop and ask the user.
 3. Use `image` (the floating tag, which follows the latest ART build) for an ad-hoc install, or `image_by_digest` when reproducing a CI result.
