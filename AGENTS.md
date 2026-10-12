@@ -40,7 +40,7 @@ After brainstorming writes and commits a spec change, **auto-push and open a PR*
 3. Detect the fork remote: get the authenticated GitHub username (`gh api user -q .login`), then find the remote whose push URL contains that username (e.g. `git remote -v | grep push | grep <username>`). Extract `<fork-remote>` name and `<fork-user>` from its URL. If no matching remote is found, stop and tell the user.
 4. Create a branch: `spec/<TRACING-XXXX>-<topic>` (use `TRACING-0000` when there is no Jira ticket)
 5. Push: `git push <fork-remote> spec/<branch>`
-6. Open the PR with the `kind/design` label:
+6. Open the PR against `rhobs/redhat-build-of-opentelemetry-workspace` with the `kind/design` label:
    ```
    gh pr create --repo rhobs/redhat-build-of-opentelemetry-workspace --head <fork-user>:<branch> --base main \
      --title "TRACING-XXXX <summary>" --body "Spec-only change, pre-push reviewed." \
