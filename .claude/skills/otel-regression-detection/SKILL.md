@@ -1,7 +1,7 @@
 ---
 name: otel-regression-detection
-description: Detect regressions in upstream OpenTelemetry repos compared to the downstream Red Hat build of OpenTelemetry release. Dynamically discovers components from manifest.yaml and docs. Analyzes changelogs, code diffs, feature gates, GitHub issues, doc staleness, test coverage gaps, and dependency changes. Use when the user asks to check for upstream regressions or breaking changes ahead of a release.
-argument-hint: "[--method changelog|code-diff|feature-gates|issues|doc-validation|test-coverage|dependencies] [--release-version 3.10]"
+description: Detect regressions in upstream OpenTelemetry repos compared to the downstream Red Hat build of OpenTelemetry release. Dynamically discovers components from the ART release branch (manifest.yaml) and docs. Analyzes changelogs, code diffs, feature gates, GitHub issues, doc staleness, test coverage gaps, and dependency changes. Use when the user asks to check for upstream regressions or breaking changes ahead of a release.
+argument-hint: "[--method changelog|code-diff|feature-gates|issues|doc-validation|test-coverage|dependencies] [--release-version 0.158]"
 ---
 
 # OpenTelemetry Upstream Regression Detection
@@ -19,7 +19,7 @@ Detect regressions and breaking changes in upstream OpenTelemetry repositories c
 
 The workflow has 4 phases:
 
-1. **Discover** — parses `manifest.yaml` from `konflux-opentelemetry/redhat-opentelemetry-collector` to get the exact component list and base version, then globs `openshift-docs` for doc files. Cross-references to find drift. No static component registry needed.
+1. **Discover** — resolves the ART release branch `rhosdt-<version>` (the highest one in `ocp-build-data`, or the one given with `--release-version`), parses `manifest.yaml` of that branch in `redhat-opentelemetry-collector` to get the exact component list and collector base version, reads `operator=` from `versions.txt` of the same branch in `open-telemetry-opentelemetry-operator` and resolves the upstream tag of that version as the operator base, then globs `openshift-docs` for doc files. Cross-references to find drift. No static component registry needed.
 
 2. **Setup** — validates repos exist, fetches latest upstream, verifies base tags
 
@@ -42,7 +42,7 @@ Repos must be cloned into the workspace directory first:
 make clone-repos
 ```
 
-Required repos: `konflux-opentelemetry`, `opentelemetry-operator`, `opentelemetry-collector-contrib`, `opentelemetry-collector`, `redhat-opentelemetry-collector` (used to read `manifest.yaml` for a specific release version — see `--release-version` below).
+Required repos: `ocp-build-data` (latest ART release branch), `redhat-opentelemetry-collector` (`manifest.yaml`), `open-telemetry-opentelemetry-operator` (`versions.txt`), `opentelemetry-operator`, `opentelemetry-collector-contrib`, `opentelemetry-collector`. The legacy `konflux-opentelemetry` repo is not used: the OpenTelemetry builds moved to ART.
 Optional: `openshift-docs` (doc validation), `distributed-tracing-qe` (QE test coverage).
 
 The `gh` CLI must be authenticated for GitHub issue/PR scanning.
@@ -58,7 +58,7 @@ The CI job runs automatically roughly every six weeks (1st of Jan/Apr/Jul/Oct, 1
 
 Run locally only if you need fresher results or want to focus on a specific detection method.
 
-### Basic (analyzes current release in konflux-opentelemetry)
+### Basic (analyzes the latest ART release)
 
 ```
 /otel-regression-detection
@@ -66,13 +66,13 @@ Run locally only if you need fresher results or want to focus on a specific dete
 
 ### Analyze a specific release version
 
-If `konflux-opentelemetry` has been updated to a newer version but you want to analyze a previously shipped release:
+If a newer ART release branch exists but you want to analyze a previous one (the version is the one in the branch name `rhosdt-<version>`, which matches the operator version):
 
 ```
-/otel-regression-detection --release-version 3.10
+/otel-regression-detection --release-version 0.158
 ```
 
-This uses the `v3.10` tag in `konflux-opentelemetry` to read the exact component list, operator commit, and collector version that shipped with that release.
+This reads the component list and collector version from the `rhosdt-0.158` branch of `redhat-opentelemetry-collector`, and the operator base from the `rhosdt-0.158` branch of `open-telemetry-opentelemetry-operator`. Releases before the ART migration (`rhosdt-3.x`) are not supported; check out an older revision of this workspace to analyze them.
 
 ### Focus on a single detection method (faster, lower token cost)
 
@@ -95,7 +95,8 @@ This uses the `v3.10` tag in `konflux-opentelemetry` to read the exact component
    Workflow({
      name: 'regression-detection',
      args: {
-       konflux_path: 'konflux-opentelemetry',
+       art_path: 'ocp-build-data',
+       fork_operator_path: 'open-telemetry-opentelemetry-operator',
        operator_path: 'opentelemetry-operator',
        contrib_path: 'opentelemetry-collector-contrib',
        core_path: 'opentelemetry-collector',
@@ -103,19 +104,19 @@ This uses the `v3.10` tag in `konflux-opentelemetry` to read the exact component
        docs_path: 'openshift-docs',       // optional — omit or '' if not cloned
        qe_path: 'distributed-tracing-qe', // optional — omit or '' if not cloned
        method: 'all',                     // or one of the --method values above
-       release_version: '',               // or e.g. '3.10' for --release-version
+       release_version: '',               // or e.g. '0.158' for --release-version
      },
    })
    ```
-   All path args default to these same repo names if omitted, so the workflow also runs standalone via the auto-registered `/regression-detection` command. The workflow's Discover phase automatically extracts all build metadata from `konflux-opentelemetry`, and its Setup phase validates the required repos/base refs before proceeding.
+   All path args default to these same repo names if omitted, so the workflow also runs standalone via the auto-registered `/regression-detection` command. The workflow's Discover phase automatically extracts all build metadata from the ART release branch, and its Setup phase validates the required repos/base refs before proceeding.
 
-3. **Generate report**: The workflow's return value includes `operator_version` (the *upstream* operator version this report analyzes — the latest release tag reachable from origin/main in the operator repo, e.g. `v0.160.0`, not the downstream base version) alongside `report_markdown` and `summary_counts`. Write to `reports/regression-summary-v<operator_version>-YYYY-MM-DD.json` and `reports/regression-detection-v<operator_version>-YYYY-MM-DD.md` (the `report_markdown` field — a plain-Markdown rendering of the findings, grouped by severity (Critical/High/Medium/Low) with a Contents section linking straight to each, and each finding's metadata rendered as a table). Every report ends with a **Skill Improvement Recommendations** section: every sub-agent in the workflow self-reports any place its actual approach deviated from that agent's prompt as written, and these are collected into that section (`None.` if nothing deviated) — a running signal for improving this skill's own instructions over time. There is no HTML report — Markdown is the only report format.
+3. **Generate report**: The workflow's return value includes `operator_version` (the *upstream* operator version this report analyzes — the latest release tag reachable from origin/main in the operator repo, e.g. `v0.160.0`, not the downstream base version) alongside `report_markdown` and `summary_counts`. Write to `reports/regression-summary-v<operator_version>-YYYY-MM-DD.json` and `reports/regression-detection-v<operator_version>-YYYY-MM-DD.md` (the `report_markdown` field — a plain-Markdown rendering of the findings, grouped by severity (Critical/High/Medium/Low) with a Contents section linking straight to each, and each finding's metadata rendered as a table). Every report ends with a **Skill Improvement Recommendations** section: every sub-agent in the workflow self-reports any place its actual approach deviated from that agent's prompt as written, and these are collected into that section (`None.` if nothing deviated) — a running signal for improving this skill's own instructions over time. There is no HTML report — Markdown is the only report format. If `report_markdown` starts with `# Regression Detection — Failed`, the workflow stopped early and `operator_version` is `unknown`: show that message and do not write report files.
 
 4. **Present summary**: Show counts by severity and top findings.
 
 ## Configuration
 
-**No config file or manual updates are needed for new releases.** All repo names are listed in the Prerequisites section above, and all build metadata (component list, versions, release branch) is derived at runtime from `konflux-opentelemetry`'s submodule refs, manifest, and git metadata.
+**No config file or manual updates are needed for new releases.** All repo names are listed in the Prerequisites section above, and all build metadata (component list, versions, release branch) is derived at runtime from the `rhosdt-<version>` branch (manifest, `versions.txt`) and the upstream operator tag.
 
 ## Running in CI
 

@@ -2,7 +2,7 @@ export const meta = {
   name: 'regression-detection',
   description: 'Detect upstream regressions in OpenTelemetry repos vs downstream Red Hat build of OpenTelemetry release',
   phases: [
-    { title: 'Discover', detail: 'Parse manifest.yaml and glob docs to build component list' },
+    { title: 'Discover', detail: 'Resolve the ART release branch, read versions.txt, parse manifest.yaml and glob docs to build component list' },
     { title: 'Setup', detail: 'Validate repos, tags, and fetch latest upstream' },
     { title: 'Analyze', detail: 'Fan out changelog, code diff, feature gate, issue, test, and dependency agents' },
     { title: 'Synthesize', detail: 'Merge, deduplicate, classify, and generate report' },
@@ -230,7 +230,8 @@ const REPORT_SCHEMA = {
 // command) without requiring the otel-regression-detection skill to resolve paths first.
 // docsPath/qePath may be reset to '' below in Setup if those optional repos aren't present.
 const a = args || {}
-const konfluxPath = a.konflux_path || 'konflux-opentelemetry'
+const artPath = a.art_path || 'ocp-build-data'
+const forkOperatorPath = a.fork_operator_path || 'open-telemetry-opentelemetry-operator'
 const operatorPath = a.operator_path || 'opentelemetry-operator'
 const contribPath = a.contrib_path || 'opentelemetry-collector-contrib'
 const corePath = a.core_path || 'opentelemetry-collector'
@@ -241,56 +242,56 @@ const method = a.method || 'all'
 const releaseVersion = a.release_version || ''
 
 // ── Phase 1: Discover ──
-// Everything is derived from konflux-opentelemetry:
-//   Tags (v3.10, v3.9) pin the exact state of each release
-//   git ls-tree <tag> <submodule> → pinned submodule commits
-//   git show <commit>:manifest.yaml (in redhat-opentelemetry-collector) → component list
-//   git show <tag>:bundle-patch/patch_csv.yaml → downstream version
+// The OpenTelemetry builds are done by ART. Everything is derived from the release
+// branch (rhosdt-<version>, named after the operator version, e.g. rhosdt-0.158):
+//   ocp-build-data (ART group branches)   → which release is the latest
+//   redhat-opentelemetry-collector        → manifest.yaml: component list, dist.version
+//   open-telemetry-opentelemetry-operator → versions.txt: operator=<upstream version>
+//   opentelemetry-operator (upstream)     → tag v<operator version>: the operator base commit
+// konflux-opentelemetry is the legacy build repo (it only builds Tempo now) and is not used.
 phase('Discover')
 
-const useTag = releaseVersion ? `v${releaseVersion}` : ''
+// release_version reaches shell commands in the prompt below, so accept only <major>.<minor>.
+if (releaseVersion && !/^[0-9]+\.[0-9]+$/.test(releaseVersion)) {
+  log(`ERROR: release_version "${releaseVersion}" is not of the form <major>.<minor> (e.g. 0.158). Aborting.`)
+  return {
+    report_markdown: `# Regression Detection — Failed\n\nrelease_version "${releaseVersion}" is not of the form <major>.<minor> (e.g. 0.158).`,
+    summary_counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 },
+    operator_version: 'unknown',
+  }
+}
 
-const discovery = await agent(`You are discovering the downstream build definition and component list from the konflux-opentelemetry repo.
+const discovery = await agent(`You are discovering the downstream build definition and component list of the Red Hat build of OpenTelemetry from the ART release branch.
 
-TASK: Extract all build metadata from ${konfluxPath} and cross-reference with docs.
-${useTag ? `
-IMPORTANT: The user requested analysis for release version ${releaseVersion}.
-Use the tag "${useTag}" in konflux-opentelemetry to read the pinned state of that release.
-First run: git -C ${konfluxPath} fetch origin tag ${useTag}
-` : `
-Use the current working tree of ${konfluxPath} (latest checkout).
-`}
-STEP 1: GET BUILD METADATA FROM KONFLUX REPO
-Run these commands in ${konfluxPath}:
+TASK: Extract all build metadata from the release branch and cross-reference with docs. Do NOT checkout branches or modify working tree files — read files with "git show origin/<branch>:<file>". You MUST run the git fetch commands below: the clones only have the remote-tracking refs of the branches that existed when they were cloned, so "git show origin/<release_branch>:<file>" fails without them.
 
-a) Release branch:
-   ${useTag ? `git show ${useTag}:.gitmodules | grep branch` : 'grep "branch" .gitmodules'}
-   Extract the branch name (e.g., "rhosdt-3.10").
+STEP 1: RESOLVE THE RELEASE BRANCH
+${releaseVersion
+  ? `The user requested release version ${releaseVersion}. The release branch is "rhosdt-${releaseVersion}".`
+  : `Use the latest release. The ART group branches are named rhosdt-<version> in ${artPath} (rolling release model: the highest version is the supported release):
+   git -C ${artPath} ls-remote --heads origin 'rhosdt-*' | sed 's|.*refs/heads/||' | sort -V | tail -1
+   Use that branch name (e.g. "rhosdt-0.158").`}
+Return it as release_branch. Then fetch it in both repos that carry it (the clones only have the branches that existed when they were cloned):
+   git -C ${forkOperatorPath} fetch origin <release_branch>
+   git -C ${rhCollectorPath} fetch origin <release_branch>
+If a branch does not exist in one of them, stop and report it in "deviations" with empty versions — do not fall back to another branch.
 
-b) Pinned submodule commits:
-   ${useTag
-     ? `git ls-tree ${useTag} redhat-opentelemetry-collector — extract the commit hash (3rd field)
-   git ls-tree ${useTag} opentelemetry-operator — extract the commit hash (3rd field)`
-     : `git submodule status
-   Extract the commit hash for each (the hex string at the start, ignoring the leading +).`}
-   The opentelemetry-operator commit is the downstream operator base.
+STEP 2: OPERATOR BASE
+a) Upstream operator version of the release:
+   git -C ${forkOperatorPath} show origin/<release_branch>:versions.txt | grep -E '^operator='
+   The value (e.g. 0.158.0) is operator_base_version.
+b) The operator base commit is the upstream release tag of that version:
+   git -C ${operatorPath} fetch --tags origin
+   git -C ${operatorPath} rev-parse --verify "v<operator_base_version>^{commit}"
+   Return the commit hash as operator_base_commit.
 
-c) Downstream version:
-   ${useTag ? `git show ${useTag}:bundle-patch/patch_csv.yaml | grep "version:" | head -1` : 'grep "version:" bundle-patch/patch_csv.yaml | head -1'}
-   Extract the version (e.g., "0.152.0-3"). The part before the dash is the upstream operator version.
-
-STEP 2: PARSE MANIFEST
-${useTag
-  ? `Get the redhat-opentelemetry-collector submodule commit from step 1b.
-Then read the manifest from that commit in the redhat-opentelemetry-collector repo:
-  git -C ${rhCollectorPath || contribPath + '/../redhat-opentelemetry-collector'} show <collector_commit>:manifest.yaml
-If the redhat-opentelemetry-collector repo is not available at that path, try: ${konfluxPath}/redhat-opentelemetry-collector
-  git -C ${konfluxPath}/redhat-opentelemetry-collector show <collector_commit>:manifest.yaml`
-  : `Read the file: ${konfluxPath}/redhat-opentelemetry-collector/manifest.yaml`}
+STEP 3: PARSE MANIFEST
+Read the manifest from the release branch:
+   git -C ${rhCollectorPath} show origin/<release_branch>:manifest.yaml
 This file has sections: receivers, exporters, processors, connectors, extensions.
 Each entry has a "gomod" field like:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.152.0
-  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.152.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.158.0
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.158.0
 
 For each entry, extract:
   - type: the section it's under (receiver, exporter, processor, connector, extension)
@@ -299,15 +300,15 @@ For each entry, extract:
   - repo: "collector_contrib" if the module starts with "github.com/open-telemetry/opentelemetry-collector-contrib/", or "collector_core" if it starts with "go.opentelemetry.io/collector/"
   - version: the version string
 
-Also extract dist.version from the top of the file — this is the downstream base collector version.
+Also extract dist.version from the top of the file — this is the downstream base collector version (collector_version).
 
-STEP 3: GLOB DOCS
+STEP 4: GLOB DOCS
 ${docsPath ? `List all doc module files in: ${docsPath}/otel-collector/modules/
 Run: ls ${docsPath}/otel-collector/modules/otel-receivers-*.adoc ${docsPath}/otel-collector/modules/otel-processors-*.adoc ${docsPath}/otel-collector/modules/otel-exporters-*.adoc ${docsPath}/otel-collector/modules/otel-connectors-*.adoc ${docsPath}/otel-collector/modules/otel-extensions-*.adoc 2>/dev/null
 
 Exclude files ending in "-overview.adoc" — those are category overviews, not component docs.` : 'Docs repo not available — skip doc globbing.'}
 
-STEP 4: CROSS-REFERENCE
+STEP 5: CROSS-REFERENCE
 For each component from the manifest, check if a matching doc file exists. The matching is fuzzy:
   - receiver/jaegerreceiver → otel-receivers-jaeger-receiver.adoc
   - processor/batchprocessor → otel-processors-batch-processor.adoc
@@ -316,7 +317,7 @@ Set has_doc=true if a match exists. Record the doc_file name.
 
 For doc files that don't match any manifest component, add to documented_but_missing.
 
-STEP 5: Return the complete discovery result.${DEVIATIONS_INSTRUCTION}`, {
+STEP 6: Return the complete discovery result.${DEVIATIONS_INSTRUCTION}`, {
   label: 'discover-components',
   phase: 'Discover',
   schema: DISCOVERY_SCHEMA,
@@ -324,16 +325,22 @@ STEP 5: Return the complete discovery result.${DEVIATIONS_INSTRUCTION}`, {
 
 if (
   !discovery ||
+  !discovery.release_branch ||
   !discovery.collector_version ||
   !discovery.operator_base_commit ||
   !discovery.operator_base_version ||
   !discovery.components ||
   discovery.components.length === 0
 ) {
-  log('ERROR: Discovery phase failed — could not extract build metadata from konflux-opentelemetry. Aborting.')
+  log('ERROR: Discovery phase failed — could not extract build metadata from the ART release branch. Aborting.')
+  // ocp-build-data is only consulted to find the latest release; with --release-version the branch name is given.
+  const repoHint = releaseVersion
+    ? `${rhCollectorPath} (manifest.yaml) and ${forkOperatorPath} (versions.txt) are cloned (make clone-repos) and that the branch rhosdt-${releaseVersion} exists in both`
+    : `${rhCollectorPath} (manifest.yaml), ${forkOperatorPath} (versions.txt) and ${artPath} are cloned (make clone-repos) and that the release branch rhosdt-<version> exists in the first two`
   return {
-    report_markdown: '# Regression Detection — Failed\n\nDiscovery phase failed. Check that konflux-opentelemetry is cloned with --recurse-submodules and contains manifest.yaml.',
+    report_markdown: `# Regression Detection — Failed\n\nDiscovery phase failed. Check that ${repoHint}.`,
     summary_counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 },
+    operator_version: 'unknown',
   }
 }
 
@@ -510,6 +517,7 @@ if (
   return {
     report_markdown: `# Regression Detection — Failed\n\n${msg}`,
     summary_counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 },
+    operator_version: 'unknown',
   }
 }
 
@@ -876,6 +884,7 @@ if (!report || !report.findings_rendered || !report.summary_counts) {
   return {
     report_markdown: '# Regression Detection — Failed\n\nSynthesize phase failed. The report-generator agent did not return usable structured output.',
     summary_counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 },
+    operator_version: 'unknown',
   }
 }
 

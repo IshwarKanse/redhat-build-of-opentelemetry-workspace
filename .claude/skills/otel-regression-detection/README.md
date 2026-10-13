@@ -1,6 +1,6 @@
 # Regression Detection
 
-Automated system that detects upstream regressions in OpenTelemetry repos compared to the currently shipped Red Hat build of OpenTelemetry release. It dynamically discovers components from `konflux-opentelemetry` (manifest.yaml, submodule pins, release branch) — no manual config updates are needed for new releases.
+Automated system that detects upstream regressions in OpenTelemetry repos compared to the currently shipped Red Hat build of OpenTelemetry release. It dynamically discovers components from the ART release branch `rhosdt-<version>` (`manifest.yaml` of `redhat-opentelemetry-collector`, `versions.txt` of `open-telemetry-opentelemetry-operator`) — no manual config updates are needed for new releases.
 
 ## What it detects
 
@@ -25,8 +25,8 @@ Before running locally, check `reports/` on `main` — CI commits its reports th
 # Single detection method (faster, lower cost)
 /otel-regression-detection --method changelog
 
-# Analyze a specific release version (uses v3.10 tag in konflux-opentelemetry)
-/otel-regression-detection --release-version 3.10
+# Analyze a specific ART release (reads the rhosdt-0.158 branches)
+/otel-regression-detection --release-version 0.158
 ```
 
 ## Run in CI
@@ -58,15 +58,15 @@ Reports are written to `reports/` and committed by CI directly to `main` (also u
 
 ## How it stays current
 
-Everything is derived at runtime from `konflux-opentelemetry`:
+Everything is derived at runtime from the ART release branch `rhosdt-<version>`. The branch is named after the operator version (e.g. `rhosdt-0.158`). The legacy `konflux-opentelemetry` repo is not used.
 
 | What | Source |
 |------|--------|
-| Component list | `redhat-opentelemetry-collector/manifest.yaml` |
+| Release branch | Highest `rhosdt-*` branch in `ocp-build-data` (or `--release-version`) |
+| Component list | `redhat-opentelemetry-collector`, branch `rhosdt-<version>`, `manifest.yaml` |
 | Collector base version | `manifest.yaml` → `dist.version` |
-| Operator base commit | `git submodule status` |
-| Release branch | `.gitmodules` |
-| Downstream version | `bundle-patch/patch_csv.yaml` |
+| Operator base version | `open-telemetry-opentelemetry-operator`, branch `rhosdt-<version>`, `versions.txt` → `operator=` |
+| Operator base commit | Upstream `opentelemetry-operator` tag `v<operator version>` |
 | Doc coverage | Glob `openshift-docs/otel-collector/modules/*.adoc` |
 
-When `konflux-opentelemetry` is updated for a new release, regression detection automatically picks up the changes.
+When a new ART release branch is created (new operator minor version), regression detection automatically picks it up.
