@@ -3,10 +3,8 @@ name: otel-art-reference
 description: >
   Reference skill for ART (Automated Release Tool) build and productization of
   Red Hat build of OpenTelemetry. Use when the user asks about ART builds, ART
-  Konflux tenant configuration, image locations in ART pipelines, or release
-  promotion. Not for the legacy os-observability Konflux flow (still used for
-  Tempo) — see otel-qe-prepare-konflux-tests for that. QE use of the ART
-  builds is in otel-qe-ocp-ci-tests and otel-qe-deploy-stage-build.
+  Konflux tenant configuration, image locations, ART pipelines or release.
+  Not for the legacy os-observability Konflux flow.
 argument-hint: "[question about ART/Konflux builds or configuration]"
 ---
 
@@ -16,11 +14,11 @@ Answer questions about the ART build and productization process for Red Hat buil
 
 ## Downstream Repositories
 
-The downstream repositories contain downstream modifications and are built from `rhosdt-<version>` branches (e.g. `rhosdt-3.11`).
+The downstream repositories contain downstream modifications and are built from `rhosdt-<version>` branches (e.g. `rhosdt-0.158`) which matches the upstream version.
 
 | Repository | URL |
 |------------|-----|
-| opentelemetry-operator | https://github.com/openshift/open-telemetry-opentelemetry-operator |
+| open-telemetry-opentelemetry-operator | https://github.com/openshift/open-telemetry-opentelemetry-operator |
 | redhat-opentelemetry-collector | https://github.com/openshift/redhat-opentelemetry-collector |
 
 ## ART & Konflux Dashboards
@@ -30,7 +28,8 @@ The downstream repositories contain downstream modifications and are built from 
 | Konflux UI | https://konflux-ui.apps.kflux-ocp-p01.7ayg.p1.openshiftapps.com/ns/art-rhosdt-tenant/applications |
 | OpenShift UI (Konflux components) | https://console-openshift-console.apps.kflux-ocp-p01.7ayg.p1.openshiftapps.com/pipelines/ns/art-rhosdt-tenant/pipeline-runs |
 | OpenShift UI (ART run release pipeline) | https://console-openshift-console.apps.artc2023.pc3z.p1.openshiftapps.com/pipelines/ns/art-rhosdt-tenant/ |
-| ART build history | https://art-build-history-art-build-history.apps.artc2023.pc3z.p1.openshiftapps.com/?group=rhosdt-3.11&assembly=stream&outcome=Success&outcome=Failure&outcome=Pending&engine=konflux&hermetic=both&buildtype=image&buildtype=bundle&buildtype=fbc |
+| ART build history | https://art-build-history-art-build-history.apps.artc2023.pc3z.p1.openshiftapps.com/?group=rhosdt-0.158&assembly=stream&outcome=Success&outcome=Failure&outcome=Pending&engine=konflux&hermetic=both&buildtype=image&buildtype=bundle&buildtype=fbc |
+| ART Pipelines | https://art-pipelines-ui-art-pipelines-ui.apps.artc2023.pc3z.p1.openshiftapps.com/#/health?namespace=art-rhosdt-tenant |
 | Browse images (Quay) | https://quay.io/repository/redhat-user-workloads/ocp-art-tenant/art-fbc?tab=tags (filter `rhosdt`) |
 
 
@@ -43,12 +42,19 @@ The downstream repositories contain downstream modifications and are built from 
 | RPA Constraint | https://gitlab.cee.redhat.com/releng/konflux-release-data/-/blob/main/constraints/product/art-rhosdt.yaml?ref_type=heads | |
 | Enterprise Contract | https://gitlab.cee.redhat.com/releng/konflux-release-data/-/tree/main/config/kflux-ocp-p01.7ayg.p1/product/EnterpriseContractPolicy?ref_type=heads | |
 | Prodsec / CPE | https://gitlab.cee.redhat.com/releng/konflux-release-data/-/blob/main/prodsec/art-rhosdt.yaml?ref_type=heads | |
-| ocp-build-data | https://github.com/openshift-eng/ocp-build-data | `main` has config examples only. Product config is on `rhosdt-<version>` branches — checkout the target version after cloning. PRs must be approved by ART team. |
+| ocp-build-data | https://github.com/openshift-eng/ocp-build-data | `main` has config examples, release notes template (`./config/advisory-templates.yaml`), Jira mapping (`./product.yaml`) . Product config is on `rhosdt-<version>` branches — checkout the target version after cloning. PRs must be approved by ART team. |
 | ART product maps | https://github.com/openshift-eng/art-tools/blob/main/artcommon/artcommonlib/constants.py | |
 | openshift-priv whitelist | https://github.com/openshift/release/blob/main/core-services/openshift-priv/_whitelist.yaml | Repositories for embargoed CVEs |
 | Product pages / lifecycle | https://redhat.atlassian.net/servicedesk/customer/portal/238 | Service desk to request updates |
 | Configure Github apps/repositories | https://devservices.dpp.openshift.com/support/general_request/?template=general_github_ticket | Enable [Konflux app](https://github.com/apps/konflux-kflux-ocp-p01), ask in [#forum-pge-cloud-ops](https://redhat.enterprise.slack.com/archives/CBUT43E94)  |
 | Prodsec product definitions | https://gitlab.cee.redhat.com/prodsec/product-definitions/-/tree/master?ref_type=heads | Sources data from product and lifecycle pages |
+
+### Konflux Applications (art-rhosdt-tenant)
+
+| Application | Purpose |
+|-------------|---------|
+| `rhosdt-0-158` | Operator and collector component builds (images, bundles) |
+| `fbc-rhosdt-0-158` | File-Based Catalog (FBC) fragment builds for each supported OCP version |
 
 Advisories:
 * [Konflux stage advisories](https://gitlab.cee.redhat.com/rhtap-release/advisories/-/tree/main/data/advisories/art-rhosdt-tenant)
@@ -62,6 +68,7 @@ Advisories:
 | Konflux upstream docs | https://konflux-ci.dev/docs/ |
 | Konflux downstream docs | https://konflux.pages.redhat.com/docs/users/index.html |
 | Konflux architecture / API | https://github.com/konflux-ci/architecture |
+| Konflux portal | https://konflux.pages.redhat.com/konflux-portal/index.html |
 
 ## Contacts & Help Channels
 
@@ -78,7 +85,7 @@ Advisories:
 
 | Tool | URL | Notes |
 |------|-----|-------|
-| ART tooling (Doozer, ocp-build-data JSON schemas) | https://github.com/openshift-eng/art-tools | JSON schemas at `ocp-build-data-validator/validator/json_schemas` |
+| ART tooling (Doozer, ocp-build-data JSON schemas) | https://github.com/openshift-eng/art-tools | JSON schemas at `ocp-build-data-validator/validator/json_schemas`, release tekton pipelines |
 | Enterprise contract definition | https://github.com/release-engineering/rhtap-ec-policy | |
 | Konflux build definitions (pipelines, tasks) | https://github.com/konflux-ci/build-definitions | |
 | Konflux release pipeline | https://github.com/konflux-ci/release-service-catalog | |
@@ -89,7 +96,7 @@ Advisories:
 
 Use [get-fbc-images.sh](get-fbc-images.sh) to list the latest FBC image for each supported OCP version. It reads only active tags and follows the Quay pagination. The floating tag `rhosdt-<ver>__v<ocp>__opentelemetry-rhel9-operator` always points to the latest build; tags with a `__g<hash>` suffix are pinned to a specific git commit, but ART re-pushes those as well.
 ```bash
-./get-fbc-images.sh 3.11
+./get-fbc-images.sh 0.158
 ```
 The images are multi-arch. Pin by digest (`image_by_digest`) for CI and for reproducing a result, because only the digest does not change; use the floating tag (`image`) for ad-hoc installs on a cluster.
 
@@ -107,3 +114,37 @@ See [RELEASE.md](RELEASE.md) for the release process (draft — will be complete
    ```
 1. **Apply the IDMS** — [idms.yaml](idms.yaml) mirrors `registry.redhat.io/rhosdt` to `registry.stage.redhat.io/rhosdt`. Remove any per-image OTEL mirror set left from the old Konflux flow to avoid conflicts. OCP 4.12 has no IDMS CRD; see `otel-qe-deploy-stage-build` for the `ImageContentSourcePolicy` equivalent.
 1. **Create the CatalogSource** — use [catalog-source.yaml](catalog-source.yaml) as a template, replacing the `image` field with the FBC image from `get-fbc-images.sh` for the cluster's OCP version. See `otel-qe-deploy-stage-build`'s `install-operators/otel.yaml` for a full example with Project, OperatorGroup, and Subscription.
+
+## Query old objects and logs from cluster
+
+Install KubeArchive `kubectl` plugin (`kubectl-ka`) https://konflux.pages.redhat.com/docs/users/faq/kubearchive.html
+
+```bash
+KA_HOST=$(oc get cm -n product-kubearchive kubearchive-api-url -o jsonpath='{.data.URL}')
+kubectl ka config set host $KA_HOST
+kubectl ka get pipelinerun
+```
+
+## Get related images from FBC
+
+Use `oras` to extract the `related-images.json` artifact attached to an FBC image:
+```bash
+IMAGE=quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc@sha256:...
+oras discover --format json "$IMAGE" \
+  | jq -r '.manifests[] | select(.artifactType == "application/vnd.konflux-ci.attached-artifact" and .annotations.attachedMediaType == "application/vnd.konflux-ci.attached-artifact.related-images+json") | .digest' \
+  | xargs -I {} oras pull "quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc@{}" \
+  && cat related-images.json | jq -r '.[]'
+```
+
+To also print the NVR (Name-Version-Release) for each related image (requires `podman login registry.stage.redhat.io`):
+```bash
+cat related-images.json | jq -r '.[]' | while read -r img; do
+  stage_img="${img/registry.redhat.io/registry.stage.redhat.io}"
+  nvr=$(skopeo inspect --no-tags --override-os linux --override-arch amd64 "docker://${stage_img}" 2>/dev/null \
+    | jq -r '(.Labels["com.redhat.component"] // "") + "-" + (.Labels["version"] // "") + "-" + (.Labels["release"] // "")' \
+    | grep -v '^--$')
+  echo "${nvr:-<no NVR>}  ${img}"
+done
+```
+
+The NVR can be used to get the build and `PipelineRun` via the ART build history UI.
