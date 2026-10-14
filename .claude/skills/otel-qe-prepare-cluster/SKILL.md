@@ -26,10 +26,10 @@ If you're not already connected to an OpenShift cluster, you can either use:
 6. ClusterBot will send you the kubeconfig/login credentials once the cluster is ready.
 
 ## Get the ART FBC image for OTEL
-The user must provide the release version (e.g. 3.11). Run:
+The user must provide the ART version, which is the operator version (e.g. 0.158). Run:
 
 ```bash
-bash .claude/skills/otel-art-reference/get-fbc-images.sh <version>
+bash .claude/skills/otel-art-reference/get-fbc-images.sh <art-version>
 ```
 
 It lists the ART FBC catalog image for each supported OCP version. Pick the entry whose `ocp_version` matches the cluster (`oc get clusterversion version -o jsonpath='{.status.desired.version}'`, y-stream only, e.g. `v4.20`). The image is multi-arch, so the same entry works on amd64, arm64, ppc64le and s390x clusters. If the version has no entry, ask the user for the correct version.

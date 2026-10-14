@@ -1,12 +1,14 @@
 ---
 name: otel-qe-release-testing-epic
 description: Create or update the QE release-testing Epic and its Tasks in Jira for an RHOSDT OTEL release, assigning them to a given owner. Use when starting release testing for a new RHOSDT OTEL version, or when an existing tracker Epic is missing Tasks or an assignee.
-argument-hint: 'version: RHOSDT release version (e.g., "3.11", "3.12"), assignee: name, email, or Jira username for the Epic and its Tasks'
+argument-hint: 'version: RHOSDT release version, which is the operator version (e.g., "0.158"), assignee: name, email, or Jira username for the Epic and its Tasks'
 ---
 
 # OpenTelemetry Release Testing Epic
 
 Create (or reuse) the Jira Epic that tracks QE release testing for an RHOSDT OTEL release, and populate it with a fixed, simplified set of Tasks. Each Task description points at the current QE skill, never the retired `/rhosdt-qe:*` commands.
+
+The Epic is the release tracker of a major or minor release (a new version, a new ART group). Patch and CVE fix releases get no Epic: the process is automated and only the Konflux integration tests are checked (see `otel-art-reference`, `RELEASE.md`).
 
 This skill only creates/reads Jira issues. It does not run any tests itself — each Task tells whoever picks it up which skill to invoke.
 
@@ -36,7 +38,7 @@ Use this skill when:
 
 ### Step 1: Get the RHOSDT Version and Assignee
 
-**Ask the user** which RHOSDT OTEL version this is for (e.g. "3.11") if it wasn't already given. Also ask for an existing Epic key if the user wants to target one explicitly instead of the default search-or-create in Step 3.
+**Ask the user** which RHOSDT OTEL version this is for if it wasn't already given. The version is the operator version (e.g. "0.158"); it names the release branch `rhosdt-{version}`, the FBC images and the ITS. Also ask for an existing Epic key if the user wants to target one explicitly instead of the default search-or-create in Step 3.
 
 **Ask the user who should be assigned** to the Epic and all its Tasks (name, email, or Jira username) if it wasn't already given. Resolve it to a Jira account ID with `lookupJiraAccountId` (used as `assignee_account_id` in Steps 3 and 5). If the lookup returns more than one match, ask which account — don't guess.
 
@@ -59,28 +61,28 @@ If the user gave an existing Epic key in Step 1, use it directly and skip the se
 project = TRACING AND issuetype = Epic AND summary ~ "Verify RHOSDT {version} OTEL release"
 ```
 
-This is a fuzzy text search (e.g. "3.1" also matches "3.11"), so filter results to the exact summary `[QE] Verify RHOSDT {version} OTEL release` before deciding:
+This is a fuzzy text search (e.g. "0.15" also matches "0.158"), so filter results to the exact summary `[QE] Verify RHOSDT {version} OTEL release` before deciding:
 
 - **One exact match, not Closed:** reuse it. Always overwrite its description with the current template below (fill in `{version}` and payload links) so skill updates take effect on re-run, and fix any mismatched assignee, `customfield_10028` (`3`), or `customfield_10464` (`{id: "10608"}`) — one `editJiraIssue` call. Report its key.
 - **One exact match, but Closed:** treat as zero matches — never reuse or modify a Closed Epic. Create a new one (below), and tell the user the closed Epic's key in case that's unexpected.
 - **Zero exact matches (or the only match is Closed):** create with `issueTypeName: Epic`, `summary: [QE] Verify RHOSDT {version} OTEL release`, `assignee_account_id`, `additional_fields: {customfield_10028: 3, customfield_10464: {id: "10608"}}`, and this description (fill in `{version}` and payload links; real newlines, not `\n`):
 
-Pull the local `konflux` repo to latest `main` first (`git -C konflux checkout main && git -C konflux pull --ff-only origin main`) — payload files land close to release, so a stale checkout can miss one. OTEL is built by ART, so it has no release payload; its FBC images come from `bash .claude/skills/otel-art-reference/get-fbc-images.sh {version}`. Tempo still has a Konflux payload — check `konflux/release-payloads/` for `tempo-stage-{version}.yaml` and only include its bullet if the file exists.
+Pull the local `konflux` repo to latest `main` first (`git -C konflux checkout main && git -C konflux pull --ff-only origin main`) — payload files land close to release, so a stale checkout can miss one. OTEL is built by ART, so it has no release payload; its FBC images come from `bash .claude/skills/otel-art-reference/get-fbc-images.sh {version}`. Tempo still has a Konflux payload with its own version: if a Tempo stage release is under test, ask the user for the file name in `konflux/release-payloads/` and include its bullet, otherwise leave it out.
 
 ```
 ### Operator Versions
 
-* OTEL {version} Konflux Release CR
+* OTEL {version} (release branch `rhosdt-{version}`)
 
 ### Release Payload
 
 * OTEL (ART): FBC catalog images in https://quay.io/repository/redhat-user-workloads/ocp-art-tenant/art-fbc?tab=tags (filter `rhosdt-{version}`)
-* Tempo (Konflux, only if the file exists): https://gitlab.cee.redhat.com/distributed-tracing/konflux/-/blob/main/release-payloads/tempo-stage-{version}.yaml
+* Tempo (Konflux, only if a Tempo stage release is under test): https://gitlab.cee.redhat.com/distributed-tracing/konflux/-/blob/main/release-payloads/{tempo payload file}
 
-Before running the tests, prepare the release branch and Konflux integration tests:
+Before running the tests, prepare the release branch first and CI second. Run the skills in this order:
 
-/otel-qe-prepare-operator-tests
-/otel-qe-prepare-konflux-tests
+1. /otel-qe-prepare-operator-tests (the release branch)
+2. /otel-qe-prepare-ci (for every major or minor version, i.e. a new `rhosdt-*` branch and ART group: the Konflux ITS and the pre-merge CI; nothing for a patch or CVE fix release or a new build of the same branch)
 
 **Testing order:** the Konflux E2E and Upgrade Integration Test Jobs Task must pass before the Tests on Supported OCP Versions Task — fix Konflux failures first.
 
@@ -131,21 +133,14 @@ Use the `otel-qe-test-ibm` skill end-to-end on both clusters — it covers clust
 
 #### 3. Konflux E2E and Upgrade Integration Test Jobs `[Konflux int.]`
 
-```
-Goal: Verify the Konflux CI integration test pipelines pass for {version}. Complete this before the Tests on Supported OCP Versions Task — see Testing order in the Epic description.
-
-1. Check the e2e and upgrade integration test pipeline runs in the RHOSDT Konflux workspace: https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/rhosdt-tenant/applications/ (Activity tab → Pipeline runs → filter by "Tests"). E2E tests trigger on new bundle builds, upgrade tests trigger on new FBC builds — both on main branch commits only.
-2. E2E pipelines cover operator/operand/component version and image verification, and the DAST scan step — confirm all pass, and triage any high-severity DAST alerts (these are release blockers).
-3. Upgrade pipelines (FBC apps, e.g. `otel-fbc-v4-14-main`, `otel-fbc-v4-18-main`) verify the upgrade path and data integrity — confirm all pass.
-4. Re-run any failed pipeline via `kubectl label --overwrite -n rhosdt-tenant snapshot <name> test.appstudio.openshift.io/run=all` or the Konflux UI, and investigate failures.
-```
+Use the description in [references/konflux-its-task.md](references/konflux-its-task.md), with `{art version with dashes}` filled in as well.
 
 #### 4. Verify Release Notes and Documentation `[manual]`
 
 ```
 Goal: Verify the release notes and product documentation for {version} are accurate.
 
-1. Read the release notes from the Konflux release payload (`otel-prod-{version}.yaml`).
+1. Read the release notes in the shipment merge request of `hybrid-platforms/art/ocp-shipment-data` that the `release-from-fbc` pipeline creates (see `otel-art-reference`, `RELEASE.md`).
 2. Verify each documented feature, known issue, and fix is accurately reflected in the docs.
 3. Coordinate with the docs team to resolve any gaps.
 ```
@@ -153,9 +148,9 @@ Goal: Verify the release notes and product documentation for {version} are accur
 #### 5. Verify CVE and Bug Fixes `[manual]`
 
 ```
-Goal: Verify the CVE and bug fixes listed in the release payload are actually fixed.
+Goal: Verify the CVE and bug fixes listed in the release are actually fixed.
 
-Use the `otel-qe-verify-fixes` skill to look up each Jira issue and CVE from the release payload, verify the fix, and update the Jira issues with results.
+Use the `otel-qe-verify-fixes` skill to look up each Jira issue and CVE from the release (the shipment merge request, see `otel-art-reference`), verify the fix, and update the Jira issues with results.
 ```
 
 ### Step 6: Report Results

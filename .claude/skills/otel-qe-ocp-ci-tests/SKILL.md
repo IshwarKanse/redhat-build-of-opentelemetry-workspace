@@ -1,7 +1,7 @@
 ---
 name: otel-qe-ocp-ci-tests
 description: Set up OpenTelemetry OCP CI stage testing by creating a PR to openshift/release with digest-pinned ART FBC catalog images, then triggering the stage jobs. Use when starting stage testing for a new product release or re-pinning the FBC images after a new ART build. Also use when stage testing on an existing PR is finished and the rehearsal job results need collecting and posting to the Jira tracker.
-argument-hint: '{version} to set up testing (e.g. "3.11"), OR {pr-id} {jira-id} to collect final results and post them to Jira (e.g. "84239 TRACING-1234")'
+argument-hint: '{version} to set up testing (e.g. "0.158"), OR {pr-id} {jira-id} to collect final results and post them to Jira (e.g. "84239 TRACING-1234")'
 ---
 
 # OpenTelemetry OCP CI Stage Testing
@@ -14,7 +14,7 @@ This skill has two independent entry points. Pick by what the user passed:
 
 | Arguments | Mode | Run |
 |---|---|---|
-| A release version (`3.11`) | Setup | Steps 1-7 |
+| A release version (`0.158`) | Setup | Steps 1-7 |
 | A PR number and a Jira key (`84239 TRACING-1234`) | Final status collection | Steps 8-9 only |
 | A PR number, no Jira key | Final status collection | Steps 8-9; ask for the tracker key first |
 | Nothing, or ambiguous | — | Ask which one before doing anything |
@@ -28,7 +28,7 @@ The two modes run in separate sessions, usually days apart. Never run collection
 3. The `gh` CLI must be authenticated
 4. The `oc` CLI must be logged into `app.ci` (`oc login --server=https://api.ci.l2s4.p1.openshiftapps.com:6443`) — needed for gcsweb/deck artifact access, and for authoritative results in Step 8. If the user won't log in, Step 8 has a `gh`-only fallback with stated limitations.
 5. `skopeo`, `jq` and `curl` must be on the PATH (Step 1)
-6. The `konflux` GitLab repository is only needed when a Tempo stage release is under test (Step 2, disconnected job). OTEL no longer comes from it.
+6. The `konflux` GitLab repository is only needed when a Tempo stage release is under test (Step 2, disconnected job).
 
 ## CI Jobs in Release Repository
 
@@ -38,13 +38,13 @@ Config file locations, naming patterns, variants (regular/FIPS/ARM), job-name pa
 
 ### Step 1: Get the ART FBC Images
 
-Run from the workspace root:
+From the workspace root (`{VERSION}` is the operator version, e.g. `0.158`):
 
 ```bash
 bash .claude/skills/otel-art-reference/get-fbc-images.sh {VERSION}
 ```
 
-It lists one entry per OCP version (`ocp_version`, `tag`, `digest`, `created`, `image`, `image_by_digest`). Use `image_by_digest`, and strip the leading `v` from `ocp_version` (e.g. `v4.19` → `4.19`) — file and job names use the bare version number. Never pin the floating tag: ART re-pushes `rhosdt-{VERSION}__v<ocp>__opentelemetry-rhel9-operator` and even the `__g<hash>` tags on every build, so only the digest stays the same for the days a rehearsal PR is open.
+It lists one entry per OCP version. Use `image_by_digest`, and strip the leading `v` from `ocp_version` (e.g. `v4.19` → `4.19`) — file and job names use the bare version number. Never pin the floating tag: ART re-pushes `rhosdt-{VERSION}__v<ocp>__opentelemetry-rhel9-operator` and even the `__g<hash>` tags on every build, so only the digest stays the same for the days a rehearsal PR is open.
 
 Check the output before using it:
 
@@ -84,7 +84,7 @@ For each OCP version in the Step 1 output that has a stage config, update the fi
 
 **Changes to make** (under `tests[].steps.env`):
 1. Set `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` to `quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc@sha256:{DIGEST}`
-2. Set `MULTISTAGE_PARAM_OVERRIDE_OTEL_TESTS_BRANCH` to `rhosdt-{VERSION}`. The step clones `openshift/open-telemetry-opentelemetry-operator` and runs the e2e tests from this branch, so it must match the release under test. The branch must already be prepared — see `otel-qe-prepare-operator-tests`.
+2. Set `MULTISTAGE_PARAM_OVERRIDE_OTEL_TESTS_BRANCH` to the branch of the release under test, which is named after the operator version, for example `rhosdt-0.158`. The step clones `openshift/open-telemetry-opentelemetry-operator` and runs the e2e tests from this branch. The branch must already be prepared — see `otel-qe-prepare-operator-tests`.
 3. Also update the disconnected test config (see "Disconnected test job" in [references/ci-job-layout.md](references/ci-job-layout.md)) — same PR. Set its `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` to the 4.16 FBC digest. Leave its `MULTISTAGE_PARAM_OVERRIDE_TEMPO_INDEX_IMAGE` alone unless a Tempo stage release is under test, in which case take the IIB from `konflux/release-payloads/tempo-stage-{VERSION}.yaml`. The disconnected job mirrors the catalog with `oc-mirror` and is not covered by the checks above; if it fails with an ART image, look at the `sed` rewrites in `distributed-tracing-install-disconnected-commands.sh` first.
 
 **IMPORTANT:**

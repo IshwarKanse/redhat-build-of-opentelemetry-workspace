@@ -1,6 +1,6 @@
 ---
 name: otel-qe-prepare-operator-tests
-description: Prepare the OpenTelemetry operator repository's product branch (rhosdt-x.y) for QE product/pre-GA testing (stage CI jobs, IBM P/Z, and other product-branch test flows) — clones/syncs the branch and applies the modifications it needs for testing. Use when the user asks to prepare, sync, or set up the OpenTelemetry operator repo for product testing.
+description: Prepare the OpenTelemetry operator repository's product branch (rhosdt-<version>) for QE product/pre-GA testing (stage CI jobs, IBM P/Z, and other product-branch test flows) — clones/syncs the branch and applies the modifications it needs for testing. Use when the user asks to prepare, sync, or set up the OpenTelemetry operator repo for product testing.
 ---
 
 # Prepare OpenTelemetry Operator for Testing
@@ -20,30 +20,20 @@ Use this skill when:
 
 Ask the user for the release version (e.g. `0.158`) if not provided as an argument. Use `rhosdt-<version>` as the branch name throughout.
 
-Two downstream forks exist:
-- `openshift/open-telemetry-opentelemetry-operator` — the ART-era fork, has `rhosdt-0.158` and later
-- `os-observability/opentelemetry-operator` — the legacy Konflux fork, has `rhosdt-3.7` through `rhosdt-3.11`
+The product branch lives in `openshift/open-telemetry-opentelemetry-operator`.
 
-For `rhosdt-0.158+`, use the `openshift` fork. For older versions, use the `os-observability` fork.
-
-The OCP CI stage and downstream jobs (`otel-qe-ocp-ci-tests`) clone `openshift/open-telemetry-opentelemetry-operator` directly and run the tests from `rhosdt-<version>`. The modifications below only take effect in those jobs once they are pushed to that fork's `rhosdt-<version>` branch. Applying them in a local clone, or pushing them to the `os-observability` fork, does not change what CI runs.
+The OCP CI stage and downstream jobs (`otel-qe-ocp-ci-tests`) clone `openshift/open-telemetry-opentelemetry-operator` directly and run the tests from `rhosdt-<version>`. The modifications below only take effect in those jobs once they are pushed to that fork's `rhosdt-<version>` branch. Applying them in a local clone does not change what CI runs.
 
 ```bash
-# For rhosdt-0.158+:
 git clone git@github.com:openshift/open-telemetry-opentelemetry-operator.git
 cd open-telemetry-opentelemetry-operator
 git checkout rhosdt-<version>
-
-# For rhosdt-3.10 and earlier:
-git clone git@github.com:os-observability/opentelemetry-operator.git os-observability-opentelemetry-operator
-cd os-observability-opentelemetry-operator
-git checkout rhosdt-<version>
 ```
 
-If the repo is already present (check for a directory named `open-telemetry-opentelemetry-operator` or `os-observability-opentelemetry-operator` with `origin` pointing at the appropriate fork), `cd` into that directory and sync with the product branch. This clone is disposable test-fixture scratch space, not a place for uncommitted work — confirm that with the user before running `git clean -fd`, since it deletes untracked files:
+If the repo is already present (check for a directory named `open-telemetry-opentelemetry-operator` with `origin` pointing at `openshift/open-telemetry-opentelemetry-operator`), `cd` into that directory and sync with the product branch. This clone is disposable test-fixture scratch space, not a place for uncommitted work — confirm that with the user before running `git clean -fd`, since it deletes untracked files:
 
 ```bash
-cd <the-detected-directory>
+cd open-telemetry-opentelemetry-operator
 git restore .
 git clean -fd
 git checkout rhosdt-<version>
@@ -51,6 +41,8 @@ git pull --rebase origin rhosdt-<version>
 ```
 
 ## Product Branch Modifications
+
+This skill does not change what the pre-merge job of the product branch runs. That job (`e2e-pre-merge` in `release`, see `otel-qe-ocp-ci-tests/references/ci-job-layout.md`) runs the chainsaw tests exactly as they are in the pull request, and applies none of the modifications below.
 
 The `rhosdt-<version>` branch must contain the following modifications for product testing:
 

@@ -3,8 +3,9 @@ name: otel-art-reference
 description: >
   Reference skill for ART (Automated Release Tool) build and productization of
   Red Hat build of OpenTelemetry. Use when the user asks about ART builds, ART
-  Konflux tenant configuration, image locations, ART pipelines or release.
-  Not for the legacy os-observability Konflux flow.
+  Konflux tenant configuration, image locations in ART pipelines, or release
+  promotion. QE use of the ART builds is in otel-qe-ocp-ci-tests and
+  otel-qe-deploy-stage-build.
 argument-hint: "[question about ART/Konflux builds or configuration]"
 ---
 
@@ -14,7 +15,7 @@ Answer questions about the ART build and productization process for Red Hat buil
 
 ## Downstream Repositories
 
-The downstream repositories contain downstream modifications and are built from `rhosdt-<version>` branches (e.g. `rhosdt-0.158`) which matches the upstream version.
+The downstream repositories contain downstream modifications and are built from `rhosdt-<version>` branches (e.g. `rhosdt-0.158`) which matches the upstream version. A new branch, and with it a new ART group, is created for every new major or minor operator version; patch and CVE fix releases stay on the branch.
 
 | Repository | URL |
 |------------|-----|
@@ -94,11 +95,15 @@ Advisories:
 
 ## FBC images
 
-Use [get-fbc-images.sh](get-fbc-images.sh) to list the latest FBC image for each supported OCP version. It reads only active tags and follows the Quay pagination. The floating tag `rhosdt-<ver>__v<ocp>__opentelemetry-rhel9-operator` always points to the latest build; tags with a `__g<hash>` suffix are pinned to a specific git commit, but ART re-pushes those as well.
+Use [get-fbc-images.sh](get-fbc-images.sh) to list the latest FBC image for each supported OCP version. It reads only active tags and follows the Quay pagination. The argument is the ART version, which is the operator version (e.g. `0.158`): the FBC tags are `rhosdt-<art version>__v<ocp>__opentelemetry-rhel9-operator`. The floating tag always points to the latest build; tags with a `__g<hash>` suffix are pinned to a specific git commit, but ART re-pushes those as well.
 ```bash
 ./get-fbc-images.sh 0.158
 ```
 The images are multi-arch. Pin by digest (`image_by_digest`) for CI and for reproducing a result, because only the digest does not change; use the floating tag (`image`) for ad-hoc installs on a cluster.
+
+## Integration tests
+
+Konflux integration tests run on every FBC build in `art-rhosdt-tenant`. Where they are defined and how to check the results of the FBC images you release: [RELEASE.md](RELEASE.md#check-integration-test-results) and [check-its.sh](check-its.sh).
 
 ## Release Process
 
