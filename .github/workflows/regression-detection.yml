@@ -35,7 +35,7 @@ on:
   workflow_dispatch:
     inputs:
       method:
-        description: 'Detection method (base versions are derived from konflux-opentelemetry)'
+        description: 'Detection method (base versions are derived from the latest ART release branch)'
         required: false
         default: 'all'
         type: choice
