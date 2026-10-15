@@ -1,5 +1,4 @@
-# Tempo from the Red Hat Operators catalog: what the CI stage jobs use. Use tempo.yaml instead when a
-# Tempo stage release is under test.
+# Tempo from the Red Hat Operators catalog (the released operator): what the CI jobs use.
 apiVersion: project.openshift.io/v1
 kind: Project
 metadata:

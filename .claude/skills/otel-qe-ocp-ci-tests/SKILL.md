@@ -1,180 +1,91 @@
 ---
 name: otel-qe-ocp-ci-tests
-description: Set up OpenTelemetry OCP CI stage testing by creating a PR to openshift/release with digest-pinned ART FBC catalog images, then triggering the stage jobs. Use when starting stage testing for a new product release or re-pinning the FBC images after a new ART build. Also use when stage testing on an existing PR is finished and the rehearsal job results need collecting and posting to the Jira tracker.
-argument-hint: '{version} to set up testing (e.g. "0.158"), OR {pr-id} {jira-id} to collect final results and post them to Jira (e.g. "84239 TRACING-1234")'
+description: Run the OpenTelemetry operator e2e test matrix in OpenShift CI, as the optional pre-merge jobs of the product branch (rhosdt-<version>) triggered with /test on a pull request, and post their final results as a table in a comment on that pull request. Use when release testing of a new product version runs the matrix (a sample of the supported OCP versions, FIPS, arm64 and the console UI), when a job of the matrix must be run or rerun for a pull request, or when the testing on a pull request is finished and the results need posting on it.
+argument-hint: '{version} [pr-number] to run the matrix (e.g. "0.158", or "0.158 350" for a given PR), OR "collect {pr-number}" to post the final results on a PR (e.g. "collect 350")'
 ---
 
-# OpenTelemetry OCP CI Stage Testing
+# OpenTelemetry e2e matrix in OpenShift CI
 
-Set up stage testing for Red Hat build of OpenTelemetry release by creating a PR to the `openshift/release` repository that pins each OCP version's stage job to the ART-built FBC (file-based catalog) image, `quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc`. ART background and dashboards are in the `otel-art-reference` skill.
+The full e2e test matrix of the Red Hat build of OpenTelemetry operator runs in OpenShift CI as **optional presubmits of the product branch** `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator`. Each job builds the operator, the target allocator and the OLM bundle from the pull request, installs them on a cluster of one OpenShift version (or variant: FIPS, arm64, console UI) and runs the chainsaw suite of the pull request. The jobs do not run on their own: they are started with `/test <job>` comments on a pull request, and a failure does not block the merge. Job list, config and artifact locations: [references/ci-job-layout.md](references/ci-job-layout.md). Read it first.
+
+The shipped artifact, the ART FBC, is not what these jobs test. The Konflux integration tests (ITS) cover it on every build; see `otel-art-reference` (`RELEASE.md`, "Check integration test results").
 
 ## Modes
 
-This skill has two independent entry points. Pick by what the user passed:
-
 | Arguments | Mode | Run |
 |---|---|---|
-| A release version (`0.158`) | Setup | Steps 1-7 |
-| A PR number and a Jira key (`84239 TRACING-1234`) | Final status collection | Steps 8-9 only |
-| A PR number, no Jira key | Final status collection | Steps 8-9; ask for the tracker key first |
+| A version (`0.158`), optionally a PR number | Run the matrix | Steps 1-4 |
+| `collect` and a PR number (`collect 350`) | Final status collection | Steps 5-6 only |
 | Nothing, or ambiguous | — | Ask which one before doing anything |
 
-The two modes run in separate sessions, usually days apart. Never run collection at the end of a setup run — see the note at the end of Step 7.
+The two modes run in separate sessions, usually days apart: collection starts only when the user says testing on the PR is finished (see [references/final-status-collection.md](references/final-status-collection.md)). The PR of the collection is the one the jobs ran on, open or merged.
 
 ## Prerequisites
 
-1. The `release` GitHub repository must be cloned in the workspace
-2. Your GitHub fork of `openshift/release` must be configured as a remote
-3. The `gh` CLI must be authenticated
-4. The `oc` CLI must be logged into `app.ci` (`oc login --server=https://api.ci.l2s4.p1.openshiftapps.com:6443`) — needed for gcsweb/deck artifact access, and for authoritative results in Step 8. If the user won't log in, Step 8 has a `gh`-only fallback with stated limitations.
-5. `skopeo`, `jq` and `curl` must be on the PATH (Step 1)
-6. The `konflux` GitLab repository is only needed when a Tempo stage release is under test (Step 2, disconnected job).
-
-## CI Jobs in Release Repository
-
-Config file locations, naming patterns, variants (regular/FIPS/ARM), job-name patterns, and the separately-located disconnected job: see [references/ci-job-layout.md](references/ci-job-layout.md). Read it before Step 1.
+1. The `gh` CLI must be authenticated.
+2. `yq` on the PATH (Step 2), and a clone of `release` in the workspace (or `gh api` access to it) to read the job list.
+3. For artifacts and job history: the `oc` CLI logged into `app.ci` (`oc login --server=https://api.ci.l2s4.p1.openshiftapps.com:6443`), see [references/browsing-artifacts.md](references/browsing-artifacts.md). The results themselves come from GitHub and need no login.
 
 ## Steps
 
-### Step 1: Get the ART FBC Images
+### Step 1: Pick the pull request
 
-From the workspace root (`{VERSION}` is the operator version, e.g. `0.158`):
+The jobs run on a pull request to `rhosdt-{VERSION}`. Never open a pull request just to run them: the productization process always has one open on the branch (the test preparation of `otel-qe-prepare-operator-tests`, the version bump of the ART configuration in `bundle/`, a backport, a MintMaker dependency update), and the jobs build and test whatever that pull request contains.
 
-```bash
-bash .claude/skills/otel-art-reference/get-fbc-images.sh {VERSION}
-```
-
-It lists one entry per OCP version. Use `image_by_digest`, and strip the leading `v` from `ocp_version` (e.g. `v4.19` → `4.19`) — file and job names use the bare version number. Never pin the floating tag: ART re-pushes `rhosdt-{VERSION}__v<ocp>__opentelemetry-rhel9-operator` and even the `__g<hash>` tags on every build, so only the digest stays the same for the days a rehearsal PR is open.
-
-Check the output before using it:
-
-1. **Coverage.** Every OCP version that has a `*-stage.yaml` config (see [references/ci-job-layout.md](references/ci-job-layout.md)) must appear in the output. If one is missing, stop and report it — ART has not built that catalog yet. Do not fall back to an older release's image. The output may list versions that have no stage config (e.g. 4.13, 4.15); ignore those.
-2. **Digest.** For each version you will pin, confirm the digest in the output is what the registry serves for the tag:
+1. **The PR the user named** (second argument).
+2. Otherwise list the open pull requests of the branch and let the user choose:
    ```bash
-   skopeo inspect --raw docker://{image} | skopeo manifest-digest /dev/stdin
+   gh pr list --repo openshift/open-telemetry-opentelemetry-operator --base rhosdt-{VERSION} --state open \
+     --json number,title,author,headRefName -q '.[] | "\(.number)\t\(.author.login)\t\(.headRefName)\t\(.title)"'
    ```
-   This must print the same `sha256:…` as `digest`. A difference means ART pushed a new build while you were working — rerun the script. Use this `--raw | manifest-digest` form: `skopeo inspect --format '{{.Digest}}'` fails on macOS for these multi-arch indexes.
-3. **Note `created`** for each version; Step 7 reports it.
+   The test-preparation PR is the best choice when it is open: the tests the jobs run are the ones it changes. Any other PR of the process works; a PR that merges while the jobs run keeps its statuses, only a new commit on it aborts them.
+3. If none is open, say so and wait for the next one; do not create one.
 
-The image is multi-arch (amd64, arm64, ppc64le, s390x), so the same reference serves the regular, FIPS and ARM jobs.
+`{PR_NUMBER}` is the number of the chosen PR. The always-run jobs (`art-build-images`, `art-build-ci-bundle-opentelemetry-bundle`, `art-build-e2e-pre-merge`) start on their own; wait for `art-build-images` to pass before Step 3, the optional jobs build the same images and fail the same way.
 
-### Step 2: Update CI Configuration Files
+### Step 2: List the jobs of the matrix
 
-Branch from current `main` so the PR does not carry stale step-registry files:
-
-```bash
-cd release
-git fetch origin
-git checkout -b otel-{VERSION}-stage-tests origin/main
-# if the branch already exists (re-pinning an open PR): git checkout otel-{VERSION}-stage-tests && git rebase origin/main
-```
-
-**Check the step registry has been migrated to ART.** The stage jobs install the catalog with the `distributed-tracing-install-otel-konflux-catalogsource` step, which must create the `registry.redhat.io/rhosdt` → `registry.stage.redhat.io/rhosdt` mirror and use the stage credentials. Without that, an ART catalog cannot pull its images:
+The jobs are the optional tests of the pre-merge config (the file name carries no OCP version; the version is in every test):
 
 ```bash
-grep -q 'registry.stage.redhat.io/rhosdt' ci-operator/step-registry/distributed-tracing/install/otel-konflux-catalogsource/distributed-tracing-install-otel-konflux-catalogsource-commands.sh \
-  && echo migrated || echo NOT-MIGRATED
+CONFIG=release/ci-operator/config/openshift/open-telemetry-opentelemetry-operator/openshift-open-telemetry-opentelemetry-operator-rhosdt-{VERSION}__art-build.yaml
+yq '.tests[] | select(.optional == true) | .as' "$CONFIG"
 ```
 
-If it prints `NOT-MIGRATED`, stop and tell the user: the step registry still uses the legacy Konflux flow and needs the one-time ART migration PR before this skill can be used.
+The always-run `e2e-pre-merge` job is not in that list; it starts on its own and is part of the matrix results all the same (Step 5).
 
-For each OCP version in the Step 1 output that has a stage config, update the file in `ci-operator/config/openshift/open-telemetry-opentelemetry-operator/`.
+Every name is triggered as `/test art-build-<name>` (variant prefix `art-build`). `/test ?` as a PR comment lists them as well. Every job in that list is part of release testing; none is skipped without the user saying so.
 
-**File pattern:** `openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-{VERSION}-{VARIANT}-stage.yaml`
+### Step 3: Trigger the jobs
 
-**Changes to make** (under `tests[].steps.env`):
-1. Set `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` to `quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc@sha256:{DIGEST}`
-2. Set `MULTISTAGE_PARAM_OVERRIDE_OTEL_TESTS_BRANCH` to the branch of the release under test, which is named after the operator version, for example `rhosdt-0.158`. The step clones `openshift/open-telemetry-opentelemetry-operator` and runs the e2e tests from this branch. The branch must already be prepared — see `otel-qe-prepare-operator-tests`.
-3. Also update the disconnected test config (see "Disconnected test job" in [references/ci-job-layout.md](references/ci-job-layout.md)) — same PR. Set its `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` to the 4.16 FBC digest. Leave its `MULTISTAGE_PARAM_OVERRIDE_TEMPO_INDEX_IMAGE` alone unless a Tempo stage release is under test, in which case take the IIB from `konflux/release-payloads/tempo-stage-{VERSION}.yaml`. The disconnected job mirrors the catalog with `oc-mirror` and is not covered by the checks above; if it fails with an ART image, look at the `sed` rewrites in `distributed-tracing-install-disconnected-commands.sh` first.
-
-**IMPORTANT:**
-- Only update files for OCP versions that exist in the Step 1 output
-- Do NOT create configs for versions not in the output
-- Update ALL variants (regular, FIPS, ARM, UI). The ARM job (`4.14-arm-stage`) is no longer special: it uses the same catalogsource step and the same FBC reference as the others
-- Tempo in the stage jobs comes from `redhat-operators`; do not add `MULTISTAGE_PARAM_OVERRIDE_TEMPO_INDEX_IMAGE` to them
-- Don't skip the disconnected config just because it's in a different project directory
-- Preserve all other configuration settings
-
-### Step 3: Commit
+One job first, so a problem with the build or the branch shows up once and not eight times. Use a job on a warm hive pool (`e2e-ocp-4-21`, or the plain job of the current GA version):
 
 ```bash
-git add <path-to-each-file-updated-in-step-2>  # only the specific files edited above, not a wildcard
-git diff --cached --name-only                  # verify no unrelated files got staged
-git commit -s -m "OTEL RHOSDT {VERSION}: Stage tests
-
-Stage testing for RHOSDT: OTEL {VERSION}
-
-- Updated OTEL FBC catalog images (pinned by digest) from ART builds"
+gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test art-build-e2e-ocp-4-21"
 ```
 
-### Step 4: Push to Fork
-
-Push to your fork remote, not `origin` (find it with `git remote -v | grep push | grep <your-github-username>`):
+When its `distributed-tracing-tests-opentelemetry-premerge` step has started the chainsaw tests (the `build-log.txt` prints the operator, collector and target allocator images under test and `Image of opentelemetry-operator-controller-manager`; see [references/browsing-artifacts.md](references/browsing-artifacts.md)), trigger the rest, every other job of the Step 2 list, on one line (`CONFIG` is the variable of Step 2):
 
 ```bash
-git push <fork-remote> otel-{VERSION}-stage-tests
+REST=$(yq '.tests[] | select(.optional == true) | .as' "$CONFIG" | grep -v '^e2e-ocp-4-21$' | sed 's/^/art-build-/' | paste -sd' ' -)
+gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test ${REST}"
 ```
 
-### Step 5: Create Pull Request
+Behaviors to plan around:
+- A new commit on the PR aborts the running jobs and reruns only the always-run ones. The optional jobs must be triggered again with `/test`.
+- `/test all` does not run the optional jobs. `/retest` reruns only the failed always-run jobs.
+- `/test <name>` reruns one job; the others are not affected.
+- The arm64 job needs the multi-arch collector image ("Promoting the collector image" in [references/ci-job-layout.md](references/ci-job-layout.md)); a failure at the collector pods right after the collector branch changed is that, not the operator.
+- `NoClusters: No clusters in pool are ready to be claimed` means the hive pool is empty (the 4.12 pool holds one cluster at a time and starts cold); wait and rerun.
 
-```bash
-gh pr create --repo openshift/release --head <fork-user>:otel-{VERSION}-stage-tests --base main \
-  --title "OTEL RHOSDT {VERSION}: Stage tests" \
-  --body "Stage testing for RHOSDT: OTEL {VERSION}. Updated OTEL FBC catalog images (pinned by digest) from ART builds. Can be merged only after all jobs pass."
-```
+### Step 4: Report
 
-Note the PR number from the output — it's `{PR_NUMBER}` in Step 6.
+Tell the user the PR, the jobs triggered, and that the results arrive as checks on the PR (`gh pr checks {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator`). For a failing job, check its `openshift-observability-qe-agent` step first ([references/browsing-artifacts.md](references/browsing-artifacts.md)).
 
-### Step 6: Trigger Rehearsal Jobs
+## Final status collection
 
-Rehearse one job first and check it, so a broken digest or config shows up once and not ten times. Use the 4.20 job (or the lowest version in the PR if there is no 4.20):
+Steps 5-6, collecting the final result of every job on the PR and posting the table as a comment on the PR: [references/final-status-collection.md](references/final-status-collection.md). Read it when running collection mode.
 
-```bash
-gh pr comment {PR_NUMBER} --repo openshift/release --body "/pj-rehearse {one-job-name}"
-```
+## Browsing job logs and artifacts
 
-Once the job's `distributed-tracing-install-otel-konflux-catalogsource` step looks healthy (see below), trigger the rest:
-
-```bash
-gh pr comment {PR_NUMBER} --repo openshift/release --body "/pj-rehearse {job-list}"
-```
-
-Where `{job-list}` is a space-separated list of the remaining job names from the updated configs, including the disconnected job's periodic name — periodics rehearse via `/pj-rehearse` the same way presubmits do. Job name pattern:
-```
-periodic-ci-openshift-open-telemetry-opentelemetry-operator-main-opentelemetry-product-ocp-{VERSION}-{VARIANT}-stage-opentelemetry-stage-tests
-periodic-ci-openshift-distributed-tracing-qe-main-ocp-4.16-disconnected-distributed-tracing-tests-disconnected
-```
-
-**Example:**
-```
-/pj-rehearse periodic-ci-openshift-open-telemetry-opentelemetry-operator-main-opentelemetry-product-ocp-4.19-stage-opentelemetry-stage-tests periodic-ci-openshift-open-telemetry-opentelemetry-operator-main-opentelemetry-product-ocp-4.20-stage-opentelemetry-stage-tests
-```
-
-**What a healthy install step looks like.** In the job's `artifacts/opentelemetry-stage-tests/distributed-tracing-install-otel-konflux-catalogsource/build-log.txt` (URL pattern in [references/browsing-artifacts.md](references/browsing-artifacts.md)):
-- `DT_INDEX_IMAGE is set to: quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc@sha256:…` — the digest you pinned.
-- `imagedigestmirrorset.config.openshift.io/otel-registry created`. On OCP 4.12, which has no `ImageDigestMirrorSet` CRD, it is `imagecontentsourcepolicy.operator.openshift.io/otel-registry created` instead. Both mirror `registry.redhat.io/rhosdt` to `registry.stage.redhat.io/rhosdt`.
-- `otel-catalogsource CatalogSource created successfully` — the catalog reached `READY`.
-
-If the CatalogSource never reaches `READY`, the step dumps the pod and node pull diagnostics in the same log. If the operator pods later hit `ImagePullBackOff`, the mirror or the stage credentials are the first things to check.
-
-Two rehearsal behaviors to plan around:
-- Pushing a new commit to the PR aborts the rehearsals that are running. Push first, then comment, and never push while a round is in progress unless you intend to restart it.
-- Commenting `/pj-rehearse` with a subset retriggers only those jobs. To rerun one failed job, comment just its name; the others are not affected.
-
-### Step 7: Report Setup Results
-
-Provide the user with:
-1. PR URL
-2. List of updated config files
-3. FBC digest used for each OCP version, with the build date (`created`) from Step 1
-4. Rehearsal jobs triggered
-
-Testing is now in progress. Steps 8-9 are a separate, later pass — do NOT run them here. Jobs take hours, are rerun after fixes, and more `/pj-rehearse` rounds usually follow. A status collected now is wrong by the time anyone reads it.
-
-## Final Status Collection
-
-Steps 8-9 — collecting each rehearsed job's final result and posting the table to the Jira tracker. Full procedure in [references/final-status-collection.md](references/final-status-collection.md); read it when running collection mode.
-
-## Browsing CI Job Logs and Artifacts
-
-When a job fails and you need to dig into logs, JUnit XML, or the `openshift-observability-qe-agent` diagnosis, see [references/browsing-artifacts.md](references/browsing-artifacts.md) — gcsweb URL patterns, authentication, and which artifact to read first.
+Artifact URLs, the `app.ci` login for gcsweb, and which artifact to read first: [references/browsing-artifacts.md](references/browsing-artifacts.md).

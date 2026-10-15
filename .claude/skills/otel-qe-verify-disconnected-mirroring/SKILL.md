@@ -20,10 +20,6 @@ registry required — in seconds.
 - **`otel-qe-deploy-stage-build`** skill — typical predecessor when validating a live cluster: it installs
   the OTEL/Tempo operators, producing the installed CSVs this skill then checks. Not required if
   you're validating a bundle image directly (no cluster involved).
-- **`atlassian` plugin** (Atlassian MCP server, install from the `claude-plugins-official`
-  marketplace) — required for posting the summary comment to the Jira disconnected-test tracker
-  in step 4. If it isn't installed or authenticated, tell the user and still print the summary,
-  just skip the Jira comment rather than failing silently.
 - `oc`, `yq`, `jq`, and `skopeo` — should already be on the machine (verify with
   `command -v oc yq jq skopeo`).
 
@@ -35,7 +31,7 @@ in the separate `openshift/release` repo — see "Reference files" below)
 does three things via `cucushift-installer-rehearse-gcp-ipi-disconnected`:
 
 1. `distributed-tracing-install-disconnected` — runs `oc-mirror --v1` against the OTEL catalog (the
-   ART FBC image) and the Tempo IIB, mirroring the index, bundle, and every `spec.relatedImages`
+   ART FBC image) and the Tempo catalog image it is configured with (a separate job; Tempo is installed from `redhat-operators` everywhere else, and this job is not part of the OTEL release flow), mirroring the index, bundle, and every `spec.relatedImages`
    entry, then applies the generated `ImageContentSourcePolicy` + `CatalogSource`.
 2. `install-operators` — installs the operators from the mirrored catalog sources.
 3. `distributed-tracing-tests-disconnected` — runs chainsaw e2e tests to confirm collector pods
@@ -75,11 +71,11 @@ job — see "What this does not cover" below.
           (`skopeo login registry.stage.redhat.io` with the team's stage credentials first; on macOS
           add `--override-os linux --override-arch amd64` to `skopeo copy`). The
           catalog does not embed the CSV, so the bundle image has to be pulled.
-        - **Tempo** — still from the Konflux stage release-payload snapshot
-          `konflux/release-payloads/tempo-stage-<version>.yaml`, under
-          `spec.components[] | select(.name == "tempo-bundle-main").containerImage`. The
-          `*-prod-*.yaml` files are Release *requests* and don't carry a `spec.components`
-          snapshot until they're actually released — use the stage file.
+        - **Tempo** — the released operator from the Red Hat Operators catalog: render the
+          production index for the OCP version of interest and read the newest bundle, the same
+          way as for OTEL (`opm render` of `/configs/tempo-product` from
+          `registry.redhat.io/redhat/redhat-operator-index:v<ocp>`, which needs a
+          `registry.redhat.io` login), or take the CSV from a live cluster where it is installed.
      2. Extract the CSV from that bundle image: copy the image to an OCI dir, untar the layer
         blobs, then read `manifests/*.clusterserviceversion.yaml` from the extracted tree:
         ```bash
@@ -105,15 +101,6 @@ job — see "What this does not cover" below.
 3. **Report** a clear pass/fail summary to the user, including the CSV name/version validated
    and the source (live cluster vs. bundle image).
 
-## Recording the result in Jira
-
-After reporting the summary, ask the user for the Jira tracker for the disconnected test (a
-`TRACING-XXXX` issue). If they give one, post the pass/fail summary as a comment on that issue via
-the `atlassian` plugin's `addCommentToJiraIssue` (`cloudId: redhat.atlassian.net`). Skip this
-(after telling the user) if they have no tracker to hand or the `atlassian` plugin isn't
-available — it's a record-keeping nice-to-have, not a condition for the check itself passing or
-failing.
-
 ## Optional deeper verification
 
 - **Staleness check**: confirm each `relatedImages` digest is still pullable. ART bundles name
@@ -124,8 +111,6 @@ failing.
   ```bash
   skopeo inspect --raw docker://registry.stage.redhat.io/rhosdt/<name>@sha256:<digest> >/dev/null && echo OK || echo STALE
   ```
-  Tempo's Konflux `quay.io/redhat-pending/...` staging refs can expire before a real mirror
-  run; check those the same way.
 
 ## What this does not cover
 

@@ -4,8 +4,9 @@ description: >
   Reference skill for ART (Automated Release Tool) build and productization of
   Red Hat build of OpenTelemetry. Use when the user asks about ART builds, ART
   Konflux tenant configuration, image locations in ART pipelines, or release
-  promotion. QE use of the ART builds is in otel-qe-ocp-ci-tests and
-  otel-qe-deploy-stage-build.
+  promotion. QE use of the ART builds (installing an FBC on a cluster) is in
+  otel-qe-deploy-stage-build; the e2e matrix in OpenShift CI is in
+  otel-qe-ocp-ci-tests.
 argument-hint: "[question about ART/Konflux builds or configuration]"
 ---
 

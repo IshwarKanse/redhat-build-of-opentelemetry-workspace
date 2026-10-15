@@ -10,22 +10,25 @@ The pipelines can be run from:
 * [ARC OpenShift](https://console-openshift-console.apps.artc2023.pc3z.p1.openshiftapps.com/k8s/ns/art-rhosdt-tenant/tekton.dev~v1~Pipeline)
 * [ART pipelines](https://art-pipelines-ui-art-pipelines-ui.apps.artc2023.pc3z.p1.openshiftapps.com/#/pipelines). This UI allows customizing parameters for rerun.
 
-## Check integration test results
-Release only FBC builds whose tests passed. The tests run only for a subset of the FBC builds (the OCP versions that have a scenario); the other FBC builds have no test.
+## Release testing
 
-Konflux integration tests (ITS) run automatically on every FBC build, in the application `fbc-rhosdt-<art version with dashes>` of `art-rhosdt-tenant`: e2e tests, a DAST scan and an upgrade test. The scenarios are defined in `konflux-release-data` (`tenants-config/cluster/kflux-ocp-p01/tenants/art-rhosdt-tenant/otel-integration-tests.yaml`), the pipelines are in `distributed-tracing-qe` (`konflux/integration-tests/`, see its README), and the runs are in the [Konflux UI](https://konflux-ui.apps.kflux-ocp-p01.7ayg.p1.openshiftapps.com/ns/art-rhosdt-tenant/applications).
+### ART team: check the integration test results
 
-First choose the FBC builds to release with [get-fbc-images.sh](./get-fbc-images.sh), which pins them by digest. Then check the results of exactly these builds with [check-its.sh](./check-its.sh), which takes the pullspecs, finds the Snapshot of each digest and prints, as YAML, the result of its scenarios with a link to every PipelineRun (the link opens while Konflux still keeps the run, the result stays on the Snapshot).
-```bash
-./get-fbc-images.sh 0.158 > fbc-images.yaml
-./check-its.sh "$(sed -n "s/^pullspecs: *'\(.*\)'$/\1/p" fbc-images.yaml)" > its.yaml
-```
-To run a scenario again, label its Snapshot: `oc label --overwrite -n art-rhosdt-tenant snapshot <name> test.appstudio.openshift.io/run=<scenario>`.
+Release only FBC builds whose tests passed. Konflux integration tests (ITS) run automatically on every FBC build, in the application `fbc-rhosdt-<art version with dashes>` of `art-rhosdt-tenant`: e2e tests on the minimum and the maximum supported OCP version, a DAST scan on the maximum, and an upgrade test. The tests run only for the FBC builds of those OCP versions; the other FBC builds have no test. The scenarios are defined in `konflux-release-data` (`tenants-config/cluster/kflux-ocp-p01/tenants/art-rhosdt-tenant/otel-integration-tests.yaml`), the pipelines are in `distributed-tracing-qe` (`konflux/integration-tests/`, see its README), and the runs are in the [Konflux UI](https://konflux-ui.apps.kflux-ocp-p01.7ayg.p1.openshiftapps.com/ns/art-rhosdt-tenant/applications).
 
-What else to check depends on the release:
+1. Choose the FBC builds to release with [get-fbc-images.sh](./get-fbc-images.sh), which pins them by digest.
+2. Check the results of exactly these builds with [check-its.sh](./check-its.sh): it takes the pullspecs, finds the Snapshot of each digest and prints, as YAML, the result of its scenarios with a link to every PipelineRun (the link opens while Konflux still keeps the run, the result stays on the Snapshot). It exits non-zero when a result is missing, still running or not passed.
+   ```bash
+   ./get-fbc-images.sh 0.158 > fbc-images.yaml
+   ./check-its.sh "$(sed -n "s/^pullspecs: *'\(.*\)'$/\1/p" fbc-images.yaml)" > its.yaml
+   ```
+3. To run a scenario again, label its Snapshot: `oc label --overwrite -n art-rhosdt-tenant snapshot <name> test.appstudio.openshift.io/run=<scenario>`. The label is removed when the run starts; Konflux does not start a second run of the same scenario on a Snapshot while one is in progress. How to read a failed run: "Operating the scenarios" in the `otel-qe-prepare-ci` skill (`references/konflux-its.md`).
 
-* **Patch and CVE fix releases (same `rhosdt-<version>` branch):** the critical e2e tests run pre-merge on every pull request to the branch (see the `otel-qe-ocp-ci-tests` skill), but they test the code of the pull request, not the FBC images that ship. So check the integration test results of the FBC builds you release, and that no high-severity DAST alert is open (release blocker). There is no release tracker.
-* **Major and minor releases (a new version, a new ART group):** check the integration tests as above, and the OCP CI jobs (stage jobs in `release` on the same FBC images, set up with the `otel-qe-ocp-ci-tests` skill). The release tracker is the Epic `[QE] Verify RHOSDT <version> OTEL release`, created by the `otel-qe-release-testing-epic` skill, and its Tasks must be done (IBM P and Z, release notes and documentation, CVE and bug fixes).
+This is the whole check for every release type: major, minor, patch and CVE fix.
+
+### Product team: release testing
+
+For a major or minor release (a new `rhosdt-<version>` branch and ART group), run the `/otel-qe-release-testing` skill with the version (e.g. `0.159`). It walks through the checklist (branch and CI preparation, Konflux integration tests, the pre-merge e2e matrix on every supported OCP version with FIPS, arm64 and the console UI, disconnected mirroring, IBM P and Z, release notes and docs, CVE and bug fixes), naming the QE skill that runs each part. A patch or CVE fix release of the same branch needs no QE testing: the critical e2e tests ran pre-merge on every pull request to the branch (`e2e-pre-merge`), and the integration tests above are the ART team's check. CVE and bug fixes are verified on their issues with `otel-qe-verify-fixes` when asked.
 
 ## Run `release-from-fbc` pipeline
 Create the [pipeline CR](./release-from-fbc.yaml), replacing:

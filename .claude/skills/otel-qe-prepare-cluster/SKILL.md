@@ -34,9 +34,5 @@ bash .claude/skills/otel-art-reference/get-fbc-images.sh <art-version>
 
 It lists the ART FBC catalog image for each supported OCP version. Pick the entry whose `ocp_version` matches the cluster (`oc get clusterversion version -o jsonpath='{.status.desired.version}'`, y-stream only, e.g. `v4.20`). The image is multi-arch, so the same entry works on amd64, arm64, ppc64le and s390x clusters. If the version has no entry, ask the user for the correct version.
 
-## Get the Tempo images from the Konflux repo
-Tempo is not built by ART yet. Read `konflux/release-payloads/tempo-stage-<version>.yaml` from the locally-cloned `konflux` repo — look for the `containerImage`/`index_image` field under the relevant component.
-
-The Tempo FBC fragment works only on amd64 clusters; on arm64 clusters or IBM P/Z clusters the Tempo OLM bundle must be used.
-
-If the file doesn't exist for the given version, ask the user for the correct version or the Tempo FBC fragment image directly.
+## Tempo
+Tempo is only a dependency of the tests: it is installed as the released operator from the Red Hat Operators catalog (`redhat-operators`, channel `stable`), on every architecture. There is no Tempo image to get; `otel-qe-deploy-stage-build` applies its manifest.

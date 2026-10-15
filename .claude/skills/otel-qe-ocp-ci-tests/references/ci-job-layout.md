@@ -1,52 +1,71 @@
-## CI Jobs in Release Repository
+# CI jobs of the product branch in `openshift/release`
 
-The OpenShift CI jobs for OpenTelemetry stage testing are defined in the `release` repository:
+All OpenShift CI jobs of the OpenTelemetry operator product branch `rhosdt-<version>` (for example `rhosdt-0.158`) are in one config of the `release` repository:
 
-**Location:** `ci-operator/config/openshift/open-telemetry-opentelemetry-operator/`
-
-**File naming pattern:**
 ```
-openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-{VERSION}[-{VARIANT}]-stage.yaml
+ci-operator/config/openshift/open-telemetry-opentelemetry-operator/openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>__art-build.yaml
 ```
-The `-{VARIANT}` segment is omitted entirely for Regular (e.g. `...ocp-4.19-stage.yaml`, not `...ocp-4.19--stage.yaml`).
 
-**Examples:**
-- `openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-4.19-stage.yaml`
-- `openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-4.22-fips-stage.yaml`
-- `openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-4.14-arm-stage.yaml`
-- `openshift-open-telemetry-opentelemetry-operator-main__opentelemetry-product-ocp-4.22-ui-stage.yaml`
+The variant is `art-build`: the images are built from the ART Dockerfiles of the branch (`Dockerfile.art`, `Dockerfile.ta.art`, `bundle/openshift`). The file name carries no OpenShift version; every test picks its own. Only the supported branch has the config; it moves to the new branch with each new ART group (`otel-qe-prepare-ci`).
 
-**List all stage test configs:**
+The generated jobs are in `ci-operator/jobs/openshift/open-telemetry-opentelemetry-operator/openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>-presubmits.yaml`, named `pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>-art-build-<test>`, with the check `ci/prow/art-build-<test>` and the trigger `/test art-build-<test>`.
+
+## What the config builds
+
+| Pipeline image | From | Used by |
+|---|---|---|
+| `opentelemetry-operator-art` | `Dockerfile.art` of the PR, amd64 and arm64 | the bundle (substituted for the upstream operator image) |
+| `opentelemetry-target-allocator-art` | `Dockerfile.ta.art` of the PR, amd64 and arm64 | `RELATED_IMAGE_TARGET_ALLOCATOR` |
+| `opentelemetry-bundle` | `bundle/openshift` of the PR | `operator-sdk run bundle` in the `install` step |
+| `obs-tests-runner` | `tests/e2e-openshift/Dockerfile` of the PR (chainsaw, oc, the repository in `/tmp/opentelemetry-operator`) | the e2e test step |
+| `obs-ui-tests-runner` | `playwright-base` plus the repository in `/tmp/opentelemetry-operator` | the console UI test step |
+| `opentelemetry-collector` | not built here: the base image `ci/redhat-opentelemetry-collector:redhat-otel-collector`, promoted by the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` | `RELATED_IMAGE_COLLECTOR` |
+
+## Promoting the collector image
+
+The collector tag is static: the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` (`branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-<version>-images`) writes it, but only on a push to the collector branch. The collector config builds amd64 and arm64, so the tag is a manifest list once that postsubmit ran after the arm64 build was added; before that, the arm64 job fails at the collector pods. To run the postsubmit without a push, trigger it through gangway (`oc` logged in to `app.ci`, see [browsing-artifacts.md](browsing-artifacts.md)):
+
 ```bash
-ls release/ci-operator/config/openshift/open-telemetry-opentelemetry-operator/*stage.yaml
+VERSION=<version>   # e.g. 0.158
+SHA=$(gh api repos/openshift/redhat-opentelemetry-collector/commits/rhosdt-${VERSION} -q .sha)
+printf 'Authorization: Bearer %s\n' "$(oc whoami -t)" | curl -s -X POST -H @- -H 'Content-Type: application/json' \
+  https://gangway-ci.apps.ci.l2s4.p1.openshiftapps.com/v1/executions \
+  -d "{\"job_name\":\"branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images\",\"job_execution_type\":\"2\",\"refs\":{\"org\":\"openshift\",\"repo\":\"redhat-opentelemetry-collector\",\"base_ref\":\"rhosdt-${VERSION}\",\"base_sha\":\"${SHA}\"}}"
 ```
 
-**Variants:**
-- **Regular:** `ocp-4.XX-stage.yaml` - Standard x86_64 tests
-- **FIPS:** `ocp-4.XX-fips-stage.yaml` - FIPS-enabled clusters
-- **ARM:** `ocp-4.XX-arm-stage.yaml` - ARM64 architecture tests. Installs the operator the same way as the other variants (the multi-arch ART FBC through the `distributed-tracing-install-otel-konflux-catalogsource` step and `install-operators`).
+The reply carries the execution id and the status `TRIGGERED`; gangway does not report progress. Follow the run on the public job history, `https://prow.ci.openshift.org/job-history/gs/test-platform-results/logs/branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images`: it takes about ten minutes, and `SUCCESS` means the image was promoted to the static tag.
 
-- **UI:** `ocp-4.XX-ui-stage.yaml` - the OpenShift console UI test of the OpenTelemetry Collector dashboard (Playwright, started by a Chainsaw test). It installs only the OTEL operator and runs `distributed-tracing-tests-opentelemetry-ui-stage`, which takes `tests/e2e-otel-ui` from the same `rhosdt-<operator version>` branch (for example `rhosdt-0.158`). It exists for 4.22 only. Its test is also named `opentelemetry-stage-tests`, so the job name follows the pattern below with `{VARIANT}` = `ui`.
+## The tests
 
-**What each stage config pins:** `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` is the ART FBC for that OCP version (`quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc@sha256:…`), and `MULTISTAGE_PARAM_OVERRIDE_OTEL_TESTS_BRANCH` is the `rhosdt-<operator version>` branch of `openshift/open-telemetry-opentelemetry-operator` (for example `rhosdt-0.158`) that the test step clones. Tempo comes from `redhat-operators`.
+| Test (`as`) | Runs | Cluster | Suite |
+|---|---|---|---|
+| `e2e-pre-merge` | every PR, required | hive claim, `obs` 4.22 pool | critical subset (the `RUN_TESTS` list of the job in the config) |
+| `e2e-ocp-4-12` | `/test` | hive claim, `obs` 4.12 pool (cold, one cluster) | full |
+| `e2e-ocp-4-16` | `/test` | hive claim, `obs` 4.16 pool | full |
+| `e2e-ocp-4-18-arm64` | `/test` | hive claim, `openshift-ci` 4.18 arm64 pool (`ci-ocp-4-18-arm64-aws-us-east-1`) | full minus the arm64 skip list |
+| `e2e-ocp-4-20-fips` | `/test` | hive claim, `obs` 4.20 FIPS pool (`variant: fips`), `tls-scanner-run` with `PQC_CHECK` before the tests | full minus the FIPS skip list |
+| `e2e-ocp-4-21` | `/test` | hive claim, `obs` 4.21 pool | full |
+| `e2e-ui-ocp-4-22` | `/test` | hive claim, `obs` 4.22 pool | `tests/e2e-otel-ui/collector-dashboard` (Playwright, started by Chainsaw) |
+| `e2e-ocp-4-23` | `/test` | hive claim, `openshift-ci` 4.23 pool (`ci-ocp-4-23-amd64-aws-us-east-1`) | full |
+| `e2e-ocp-5-0` | `/test` | hive claim, `obs` 5.0 pool | full |
 
-**Job naming pattern:**
-```
-periodic-ci-openshift-open-telemetry-opentelemetry-operator-main-opentelemetry-product-ocp-{VERSION}-{VARIANT}-stage-opentelemetry-stage-tests
-```
+The optional tests have `always_run: false` and `optional: true`: they start only with `/test`, and a failure does not block the merge. The rerun and abort rules are in Step 3 of `SKILL.md`.
 
-**Disconnected test job:** lives in a different project directory in the same `release` repo, not the one above — `ci-operator/config/openshift/distributed-tracing-qe/openshift-distributed-tracing-qe-main__ocp-4.16-disconnected.yaml`, job name `periodic-ci-openshift-distributed-tracing-qe-main-ocp-4.16-disconnected-distributed-tracing-tests-disconnected`. Its `MULTISTAGE_PARAM_OVERRIDE_OTEL_INDEX_IMAGE` is updated to the 4.16 ART FBC digest like the other configs, and it is part of the same PR, just a different file. That job has not been run with an ART catalog yet, so check its first rehearsal closely. Unlike the stage jobs it still takes Tempo from an IIB (`MULTISTAGE_PARAM_OVERRIDE_TEMPO_INDEX_IMAGE`), which only changes when a Tempo stage release is under test. Its `cron: 0 0 30 2 *` (an impossible date) is intentional: every one of these jobs is on-demand only, triggered via `/pj-rehearse` or Gangway, never on a schedule.
+**A job either names the tests to run or the tests to skip.** `e2e-pre-merge` sets `RUN_TESTS`, the exact list of its critical test directories; the matrix jobs set `SKIP_TESTS`, the directories (globs allowed) removed from the full suite of the step (`FULL_SUITE` in `distributed-tracing-tests-opentelemetry-premerge-commands.sh`). The tests run in one chainsaw invocation with the selector `sidecar!=legacy` (OpenShift 4.16 and later) or `sidecar!=native` (older), which keeps the sidecar variant of the cluster and every unlabeled test. Two directories run on their own after the rest, in this order: `tests/e2e-metadata-filters`, after `ANNOTATIONS_FILTER` and `LABELS_FILTER` were set on the operator, and `tests/e2e-openshift-tls-profile` last, because it changes the cluster-wide TLS profile and the MachineConfig rollout would disrupt other tests. A directory of `RUN_TESTS` that does not exist fails the job; a suite directory renamed on the branch is updated in the step's full suite list.
 
-## Pre-merge jobs for the product branch (`rhosdt-<version>`, for example `rhosdt-0.158`)
+Every full-suite test runs: the `install` step (`operator-sdk run bundle` in `opentelemetry-operator-system`), `install-operators` with the `OPERATORS` list of the test (Tempo and AMQ Streams everywhere; the Cluster Observability Operator, Loki and Logging where the catalog of that OpenShift version has them), then `distributed-tracing-tests-opentelemetry-premerge` with the `SKIP_TESTS` of that version, and the `openshift-observability-qe-agent` post step (`AGENT_SKILL: otel`, `JIRA_PROJECT: TRACING`; `otel-ui` and `OOC` for the UI test). The tests run as they are in the pull request: the modifications of `otel-qe-prepare-operator-tests` count once they are in the PR or on the branch.
 
-Pull requests to `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator` run a fast critical e2e job before merging. It runs on every PR and is required to merge. The full e2e, DAST and upgrade tests run in the Konflux integration tests. Only the supported branch has these jobs; the config moves to the new branch with each new ART group (see `otel-qe-prepare-ci`).
+The step checks that the installed operator is the image built from the PR and patches `RELATED_IMAGE_COLLECTOR` and `RELATED_IMAGE_TARGET_ALLOCATOR` into the CSV; the metadata filter variables are patched the same way. Step files: `ci-operator/step-registry/distributed-tracing/tests/opentelemetry/premerge/` and `.../opentelemetry-ui/premerge/`.
 
-**Config:** `ci-operator/config/openshift/open-telemetry-opentelemetry-operator/openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>__art-build-ocp-<ocp-version>.yaml`. It builds the operator, target allocator, OLM bundle and test runner images and defines the `e2e-pre-merge` test. The jobs are `pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>-art-build-ocp-<ocp-version>-{images,ci-bundle-opentelemetry-bundle,e2e-pre-merge}`.
+## Changing the matrix
 
-**`e2e-pre-merge`:** claims a cluster from the observability hive pool `obs-ocp-<x>-<y>-0-amd64-aws-us-east-2` (for example `obs-ocp-4-22-0-amd64-aws-us-east-2` for OCP 4.22), installs the operator from the bundle built in the run, and runs the chainsaw tests listed in `TEST_DIRS` and `SIDECAR_TEST_DIRS` of the step `distributed-tracing/tests/opentelemetry/premerge/` from the PR source. The tests run as they are in the pull request, without the modifications of `/otel-qe-prepare-operator-tests`.
+- Another OpenShift version for a test: change `cluster_claim.version` and rename the test. Test names cannot contain dots, so the version is written `4-21`. The `obs` pools are in `clusters/hosted-mgmt/hive/pools/openshift-observability/` (FIPS pools carry `variant: fips`); the shared `openshift-ci` pools in `clusters/hosted-mgmt/hive/pools/openshift-ci/` cover versions and architectures the `obs` pools do not have (arm64, the next stream), and other repositories claim them too.
+- A version without any hive pool: an IPI test on `aws-observability`, `azure-observability` or `gcp-observability`. Its payload and the `openshift-install` binary must be the same version: the installer comes from `releases.latest`, so an IPI test of another version needs `latest` set to that version, not only `OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE`. Prefer a claim.
+- Tests to run or skip on one version: `RUN_TESTS` or `SKIP_TESTS` of that test (the model is described above).
+- Regenerate with `CONTAINER_ENGINE=podman make ci-operator-config jobs registry-metadata` and validate on the release PR with `/pj-rehearse pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>-art-build-<test>`.
 
-**OCP version:** `<ocp-version>` is the latest stable OCP version that has an observability pool, and the config, the jobs and the claim all use it. When a pool for a newer stable version exists, migrate to it.
+## Other jobs of the operator
 
-**Collector image:** the job uses `ci/redhat-opentelemetry-collector:redhat-otel-collector`, promoted by the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector`. The tag is static. A postsubmit runs only on a push to the branch; to run it without a push, trigger `branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-<version>-images` through gangway.
-
-**Rehearsal:** `/pj-rehearse pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>-art-build-ocp-<ocp-version>-e2e-pre-merge` on a PR to `release`. `NoClusters: No clusters in pool are ready to be claimed` in the log means the hive pool is empty, not that the job is broken.
+- **Downstream periodics** on `main` (`...-main__opentelemetry-product-ocp-<version>-downstream.yaml`, weekly): the released product from `redhat-operators`, with the tests cloned from `rhosdt-<version>` (`MULTISTAGE_PARAM_OVERRIDE_OTEL_TESTS_BRANCH`). Not part of release testing.
+- **Upstream presubmits** on `main` (`...-main__upstream-ocp-<version>-amd64.yaml`): the upstream operator built from `main`.
+- The disconnected job of `distributed-tracing-qe` is not part of the OTEL release testing; `otel-qe-verify-disconnected-mirroring` covers the mirroring check.

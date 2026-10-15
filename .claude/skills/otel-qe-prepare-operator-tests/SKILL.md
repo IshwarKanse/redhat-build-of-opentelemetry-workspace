@@ -1,6 +1,6 @@
 ---
 name: otel-qe-prepare-operator-tests
-description: Prepare the OpenTelemetry operator repository's product branch (rhosdt-<version>) for QE product/pre-GA testing (stage CI jobs, IBM P/Z, and other product-branch test flows) — clones/syncs the branch and applies the modifications it needs for testing. Use when the user asks to prepare, sync, or set up the OpenTelemetry operator repo for product testing.
+description: Prepare the OpenTelemetry operator repository's product branch (rhosdt-<version>) for QE product/pre-GA testing (the e2e matrix jobs in OpenShift CI, the Konflux integration tests, IBM P/Z, and other product-branch test flows) — clones/syncs the branch and applies the modifications it needs for testing. Use when the user asks to prepare, sync, or set up the OpenTelemetry operator repo for product testing.
 ---
 
 # Prepare OpenTelemetry Operator for Testing
@@ -22,7 +22,7 @@ Ask the user for the release version (e.g. `0.158`) if not provided as an argume
 
 The product branch lives in `openshift/open-telemetry-opentelemetry-operator`.
 
-The OCP CI stage and downstream jobs (`otel-qe-ocp-ci-tests`) clone `openshift/open-telemetry-opentelemetry-operator` directly and run the tests from `rhosdt-<version>`. The modifications below only take effect in those jobs once they are pushed to that fork's `rhosdt-<version>` branch. Applying them in a local clone does not change what CI runs.
+The modifications below reach CI in two ways. The e2e matrix jobs of the product branch (`otel-qe-ocp-ci-tests`) run the tests of the pull request they are triggered on, so open the modifications as a pull request to `rhosdt-<version>`: that pull request is the first choice for running the matrix for the release, and the modifications are what it tests. A test directory that the job lists in `release` must exist in the pull request (see "Test Lists of the OpenShift CI Jobs" below). The Konflux integration tests and the downstream periodics clone `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator`, so they see the modifications once the pull request is merged. Applying them in a local clone does not change what CI runs.
 
 ```bash
 git clone git@github.com:openshift/open-telemetry-opentelemetry-operator.git
@@ -42,7 +42,7 @@ git pull --rebase origin rhosdt-<version>
 
 ## Product Branch Modifications
 
-This skill does not change what the pre-merge job of the product branch runs. That job (`e2e-pre-merge` in `release`, see `otel-qe-ocp-ci-tests/references/ci-job-layout.md`) runs the chainsaw tests exactly as they are in the pull request, and applies none of the modifications below.
+The pre-merge jobs of the product branch (`e2e-pre-merge` and the e2e matrix jobs in `release`, see `otel-qe-ocp-ci-tests/references/ci-job-layout.md`) run the chainsaw tests exactly as they are in the pull request and apply none of the modifications below themselves. On the pull request that carries the modifications, they test the modified tests; on any other pull request, the tests of that pull request.
 
 The `rhosdt-<version>` branch must contain the following modifications for product testing:
 
@@ -56,7 +56,7 @@ Copy the end-to-end tests for OpenTelemetry Collector components from [distribut
 
 ### Additional UI Test (OpenShift Console)
 
-Copy `tests/e2e-otel-ui` from [distributed-tracing-qe](https://github.com/openshift/distributed-tracing-qe/tree/main/tests/e2e-otel-ui) to `tests/e2e-otel-ui/` unchanged, including `Dockerfile.playwright`. It verifies the OpenTelemetry Collector dashboard in the OpenShift console (Observe > Dashboards) with Playwright and is run by the `ui` stage job and the UI downstream job. From a distributed-tracing-qe clone: `git archive origin/main tests/e2e-otel-ui | tar -x -C <operator-repo>`.
+Copy `tests/e2e-otel-ui` from [distributed-tracing-qe](https://github.com/openshift/distributed-tracing-qe/tree/main/tests/e2e-otel-ui) to `tests/e2e-otel-ui/` unchanged, including `Dockerfile.playwright`. It verifies the OpenTelemetry Collector dashboard in the OpenShift console (Observe > Dashboards) with Playwright and is run by the `e2e-ui-ocp-<x>-<y>` pre-merge job and the UI downstream job. From a distributed-tracing-qe clone: `git archive origin/main tests/e2e-otel-ui | tar -x -C <operator-repo>`.
 
 This repo's `.gitignore` ignores `package-lock.json`, but the test runs `npm ci` and needs `tests/e2e-otel-ui/collector-dashboard/ui/package-lock.json`. Add the same entries as distributed-tracing-qe to `.gitignore`, once per branch:
 
@@ -69,6 +69,10 @@ tests/e2e-otel-ui/**/test-results/
 
 The existing `sed` for the community collector image below does not touch these files: their collectors use the operator's default image.
 
+### Test Lists of the OpenShift CI Jobs
+
+The pre-merge jobs run the test directories listed in `release` (see "The tests" in `otel-qe-ocp-ci-tests/references/ci-job-layout.md`). When a test directory that those lists name is renamed or removed on the branch, update the lists in `release` as well (`otel-qe-prepare-ci`); a listed directory that does not exist fails the job.
+
 ### Remove Hardcoded Community Collector Image
 
 Some `OpenTelemetryCollector` CRs across the `tests/` tree — both the freshly-copied `tests/e2e-otel/` tests and pre-existing ones elsewhere (e.g. `tests/e2e/smoke-collector/`, `tests/e2e-openshift/`) — hardcode `image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:...`. Remove that line wherever it appears under `tests/` so the operator injects its default product image instead. Scope the search and the deletion to `tests/` only — the same string also appears in `docs/` (an unrelated usage example) and in generated `junit_*.xml` reports, neither of which should be touched. Anchor the deletion to the `image:` field itself, not just any line containing the string, in case a future file references it elsewhere (e.g. a comment):
@@ -80,7 +84,7 @@ if [ -n "$FILES" ]; then
 fi
 ```
 
-The CI stage and downstream jobs run the branch as it is and do not apply this `sed`, so the result must be committed to the fork. `rhosdt-0.158` is already clean; run it again after copying new tests from distributed-tracing-qe, and push the result.
+The CI jobs run the pull request or the branch as it is and do not apply this `sed`, so the result must be committed. `rhosdt-0.158` is already clean; run it again after copying new tests from distributed-tracing-qe, and push the result.
 
 ### Remove nodeAffinity from Target Allocator Tests
 
