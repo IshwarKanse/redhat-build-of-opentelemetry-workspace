@@ -112,6 +112,19 @@ The distro includes 10 extensions in source. Support levels per documentation:
 8. In the v1beta1 API, collector config is a structured object with typed fields for receivers, exporters, processors, connectors, extensions, and service.
 9. In the deprecated v1alpha1 API, collector config is a raw YAML string.
 
+### Receiving OpenShift Monitoring Metrics via Remote Write v2
+
+The in-cluster (platform) and user workload monitoring (UWM) Prometheus instances export their metrics to the collector with Prometheus remote write v2; the collector forwards them to any backend (OTLP, vendor exporters). Verified on OpenShift 5.0 (TRACING-6909); design in `docs/superpowers/specs/2026-10-18-ocp-monitoring-metrics-export-design.md`; PoC manifests and the sizing benchmark harness in github.com/IshwarKanse/demo `otel-ocp-metrics-export`.
+
+10. The monitoring side is configured only through the Cluster Monitoring Operator config maps: `cluster-monitoring-config` (`prometheusK8s.remoteWrite`) and `user-workload-monitoring-config` (`prometheus.remoteWrite`) with `messageVersion: V2.0`. `messageVersion` exists since OpenShift 5.0; on earlier versions only the federation endpoint (Prometheus receiver) is available.
+11. The collector side uses the `prometheus_remote_write` receiver (TP; `prometheusremotewrite` is a deprecated alias). The receiver accepts only the v2 message. The receiver port must be listed in `spec.ports` of the `OpenTelemetryCollector` CR because the operator does not infer it.
+12. Until MON-4412 lands, CMO does not expose `metadata-wal-records`, `scrapeNativeHistograms` and `convertClassicHistogramsToNHCB`: all series arrive with an unspecified type and are emitted as untyped gauges (counters, classic histogram `_bucket`/`_sum`/`_count` and summary quantiles included); native histograms are not exported. No series is dropped.
+13. Both replicas of each Prometheus instance send every sample; they differ only in the `prometheus_replica` label. Deduplication is the backend's job.
+14. Documented resilience settings for the exporter: `retry_on_failure.max_elapsed_time: 0`, `sending_queue.sizer: items` with a bounded `queue_size`, `block_on_overflow: true` and exporter-side `sending_queue.batch` instead of the batch processor, plus the `memory_limiter` processor. With the defaults a 5 minute backend outage OOM-killed the collector and dropped batches; with these settings back-pressure reaches Prometheus, which retries from its WAL, and no sample is lost.
+15. No additional collector component is needed: the receiver, the OTLP exporters, `memory_limiter`, `filter`, `resource` and `transform` are in the 0.158 distro manifest.
+16. AWS CloudWatch is a validated third-party backend for this flow through the AWS EMF exporter (`awsemf`, TP); the receiver maps the Prometheus `job`/`instance` labels to the `service.name`/`service.instance.id` resource attributes, which become CloudWatch dimensions. The `awsemf` exporter has no `sending_queue`/`retry_on_failure` settings (it retries itself through `max_retries`).
+17. Sizing (product collector 0.158.0, OpenShift 5.0): about 1 CPU core per 100,000 samples/s and under 250 MiB in steady state per replica; documented requests 500m / 512Mi and limits 2 CPU / 2Gi (the limits absorb the recovery burst after a backend outage); one replica up to 95,000 samples/s (measured 2026-10-20: 1.06 cores at 96,000 samples/s), add replicas beyond that; the docs present the figures as a table by remote write rate.
+
 ## Summary
 
 | Category | GA | TP | Not Supported |
