@@ -73,3 +73,4 @@ These features span multiple repos:
 | New OCP version support | konflux-opentelemetry (new FBC catalog + Dockerfile) |
 | Cluster TLS profile adherence | opentelemetry-operator (profile fetch, operand injection, target allocator), opentelemetry-collector (`config/configtls` curve allowlist), openshift-docs |
 | OpenShift monitoring metrics export via remote write v2 | openshift-docs (`otel-config-receive-metrics-monitoring-stack-remote-write.adoc`), distributed-tracing-qe (`tests/e2e-otel/prometheusremotewritereceiver-cluster-monitoring`), cluster-monitoring-operator (MON-4412) |
+| OpenShift platform metrics without the monitoring stack (collector-only) | openshift-docs (`otel-config-receive-metrics-without-monitoring-stack.adoc`), distributed-tracing-qe (`tests/e2e-otel/platformmetrics-collector-only`, `awsemfexporter-platformmetrics`) |
