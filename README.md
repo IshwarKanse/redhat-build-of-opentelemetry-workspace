@@ -21,7 +21,7 @@ Cross-repo workspace for Red Hat build of OpenTelemetry — shared specs, routin
 | [logging-view-plugin](https://github.com/openshift/logging-view-plugin)                              | OpenShift console plugin for logging view                             |
 | [multicluster-observability-addon](https://github.com/stolostron/multicluster-observability-addon)   | Multi-cluster observability addon for ACM, includes OpenTelemetry     |
 | [distributed-tracing-qe](https://github.com/openshift/distributed-tracing-qe)                        | Additional product tests in tests/e2e-otel and the Konflux integration test pipelines in konflux/integration-tests |
-| [release](https://github.com/openshift/release) | OpenShift CI jobs for stage and downstream in ci-operator/config/openshift/open-telemetry-opentelemetry-operator           |
+| [release](https://github.com/openshift/release) | OpenShift CI jobs (pre-merge e2e matrix, upstream presubmits) in ci-operator/config/openshift/open-telemetry-opentelemetry-operator |
 
 ## Setup
 
@@ -67,10 +67,3 @@ not supported.
 - **Jira**: Project key `TRACING` on `redhat.atlassian.net`
 - **Git workflow**: Fork-based — push to your fork, PR against `origin/main`, squash before pushing
 - **Per-repo guides**: Each repo has an `AGENTS.md` with repo-specific conventions
-
-## Release Testing
-
-To start QE release testing for a new RHOSDT OTEL version:
-
-1. Run the `/otel-qe-release-testing-epic` skill with the release version (e.g. `3.12`) and the assignee for the work. It creates (or reuses) the Jira Epic that tracks release testing and populates it with the standard set of Tasks.
-2. Follow the Epic and work through its Tasks — each Task's description points at the QE skill to use for that piece of testing.

@@ -1,6 +1,6 @@
 ---
 name: otel-qe-deploy-stage-build
-description: Installs the OTEL operator from an ART stage build (the multi-arch FBC catalog image from quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc), the Tempo operator from its Konflux stage build, and their example setups on a cluster. Use when the user asks to deploy, install, or set up the stage/product build of Tempo and OpenTelemetry on a cluster for QE testing. For building and installing the upstream operator from source instead, use otel-qe-deploy-upstream-build.
+description: Installs the OTEL operator from an ART stage build (the multi-arch FBC catalog image from quay.io/redhat-user-workloads/ocp-art-tenant/art-fbc), the released Tempo operator from the Red Hat Operators catalog, and their example setups on a cluster. Use when the user asks to deploy, install, or set up the stage/product build of OpenTelemetry (with Tempo) on a cluster for QE testing. For building and installing the upstream operator from source instead, use /otel-qe-deploy-upstream-build.
 ---
 
 # Deploy the Stage/Product Build
@@ -11,7 +11,7 @@ If not already connected to an OpenShift cluster, use the `/otel-qe-prepare-clus
 ## Step 1: Give the cluster access to the stage registry
 
 ### OTEL (ART)
-The ART catalog references `registry.redhat.io/rhosdt/*@sha256:…` images that exist only on `registry.stage.redhat.io/rhosdt` until the release is published. The cluster needs the stage credentials and a mirror from the production name to the stage registry. Both live in the `otel-art-reference` skill:
+The ART catalog references `registry.redhat.io/rhosdt/*@sha256:…` images that exist only on `registry.stage.redhat.io/rhosdt` until the release is published. The cluster needs the stage credentials and a mirror from the production name to the stage registry. Both live in the `/otel-art-reference` skill:
 
 ```bash
 bash .claude/skills/otel-art-reference/setup-stage-credentials.sh <stage-registry-auth-token>
@@ -39,13 +39,6 @@ EOF
 Wait until `oc get mcp` shows every pool `UPDATED=True` (about a minute) before Step 2. A catalog created while the nodes are still updating reports `TRANSIENT_FAILURE`, and the first Subscription resolution fails.
 
 If the cluster still has the OTEL mirror set from the old Konflux flow (the one applied from `konflux-opentelemetry`'s `.tekton/images-mirror-set.yaml`), delete it first: its per-image sources point at the legacy Konflux repositories, not at the ART images. Find it with `oc get imagedigestmirrorset` and look for `opentelemetry` sources.
-
-### Tempo stage release (Konflux)
-Only needed when a Tempo stage release is under test (see Step 2). Tempo is not built by ART and such a build still comes from Konflux:
-
-```
-kubectl apply -f https://raw.githubusercontent.com/os-observability/konflux-tempo/refs/heads/main/.tekton/images-mirror-set.yaml
-```
 
 ## Step 2: Install operators
 
@@ -77,19 +70,7 @@ A node pull error mentioning `x509` means the cluster does not trust the stage r
 
 ### Tempo operator
 
-Unless a Tempo stage release is under test, install Tempo from the Red Hat Operators catalog, as the CI stage jobs do. `oc apply -f install-operators/tempo-redhat-operators.yaml`. It is available on amd64, arm64, ppc64le and s390x (tempo-operator v0.22.0-2 installed on an OCP 4.22 IBM P cluster).
-
-For a Tempo stage release, use the Konflux builds below. Get the Tempo images from the release payload `konflux/release-payloads/tempo-stage-<version>.yaml` — see `/otel-qe-prepare-cluster`.
-
-**amd64 — FBC fragment.** Replace `<TEMPO_IIB_IMAGE>` in a copy of [`install-operators/tempo.yaml`](install-operators/tempo.yaml) with the Tempo FBC fragment image and apply it with `oc apply -f`.
-
-**arm64 and IBM P and Z — OLM bundle.** The Tempo FBC fragment works only on amd64 clusters. Use the `containerImage` of the `tempo-bundle-main` component in `tempo-stage-<version>.yaml`:
-
-```bash
-kubectl create namespace openshift-tempo-operator
-operator-sdk run bundle <TEMPO_BUNDLE_IMAGE> --namespace openshift-tempo-operator
-```
-
+Tempo is a dependency of the tests, not a build under test: install the released operator from the Red Hat Operators catalog, as the CI jobs do. `oc apply -f install-operators/tempo-redhat-operators.yaml`. It is available on amd64, arm64, ppc64le and s390x (tempo-operator v0.22.0-2 installed on an OCP 4.22 IBM P cluster). No stage registry, mirror or Konflux build is involved for Tempo.
 
 ### Other operators
 

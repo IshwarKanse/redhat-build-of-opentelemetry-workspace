@@ -4,8 +4,9 @@ description: >
   Reference skill for ART (Automated Release Tool) build and productization of
   Red Hat build of OpenTelemetry. Use when the user asks about ART builds, ART
   Konflux tenant configuration, image locations in ART pipelines, or release
-  promotion. QE use of the ART builds is in otel-qe-ocp-ci-tests and
-  otel-qe-deploy-stage-build.
+  promotion. QE use of the ART builds (installing an FBC on a cluster) is in
+  /otel-qe-deploy-stage-build; the e2e matrix in OpenShift CI is in
+  /otel-qe-ocp-ci-tests.
 argument-hint: "[question about ART/Konflux builds or configuration]"
 ---
 
@@ -105,7 +106,7 @@ The images are multi-arch. Pin by digest (`image_by_digest`) for CI and for repr
 
 ## Integration tests
 
-Konflux integration tests run on every FBC build in `art-rhosdt-tenant`. Where they are defined and how to check the results of the FBC images you release: [RELEASE.md](RELEASE.md#check-integration-test-results) and [check-its.sh](check-its.sh).
+Konflux integration tests run on every FBC build in `art-rhosdt-tenant`. Where they are defined and how to check the results of the FBC images you release: [RELEASE.md](RELEASE.md#release-checks) and [check-its.sh](check-its.sh).
 
 ## Release Process
 
@@ -119,8 +120,8 @@ See [RELEASE.md](RELEASE.md) for the release process (draft — will be complete
    ```bash
    ./setup-stage-credentials.sh <stage-registry-auth-token>
    ```
-1. **Apply the IDMS** — [idms.yaml](idms.yaml) mirrors `registry.redhat.io/rhosdt` to `registry.stage.redhat.io/rhosdt`. Remove any per-image OTEL mirror set left from the old Konflux flow to avoid conflicts. OCP 4.12 has no IDMS CRD; see `otel-qe-deploy-stage-build` for the `ImageContentSourcePolicy` equivalent.
-1. **Create the CatalogSource** — use [catalog-source.yaml](catalog-source.yaml) as a template, replacing the `image` field with the FBC image from `get-fbc-images.sh` for the cluster's OCP version. See `otel-qe-deploy-stage-build`'s `install-operators/otel.yaml` for a full example with Project, OperatorGroup, and Subscription.
+1. **Apply the IDMS** — [idms.yaml](idms.yaml) mirrors `registry.redhat.io/rhosdt` to `registry.stage.redhat.io/rhosdt`. Remove any per-image OTEL mirror set left from the old Konflux flow to avoid conflicts. OCP 4.12 has no IDMS CRD; see `/otel-qe-deploy-stage-build` for the `ImageContentSourcePolicy` equivalent.
+1. **Create the CatalogSource** — use [catalog-source.yaml](catalog-source.yaml) as a template, replacing the `image` field with the FBC image from `get-fbc-images.sh` for the cluster's OCP version. See `/otel-qe-deploy-stage-build`'s `install-operators/otel.yaml` for a full example with Project, OperatorGroup, and Subscription.
 
 ## Query old objects and logs from cluster
 

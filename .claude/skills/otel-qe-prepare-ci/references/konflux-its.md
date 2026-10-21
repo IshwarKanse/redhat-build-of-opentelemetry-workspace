@@ -1,6 +1,6 @@
 # Konflux integration tests (new ART group)
 
-How to check the results of the scenarios is in `otel-art-reference` ([RELEASE.md](../../otel-art-reference/RELEASE.md#check-integration-test-results)). The pipelines are described in the README of `konflux/integration-tests` in `distributed-tracing-qe`. The sections below cover what the person who maintains the scenarios needs.
+How to check the results of the scenarios is in `/otel-art-reference` ([RELEASE.md](../../otel-art-reference/RELEASE.md#release-checks)). The pipelines are described in the README of `konflux/integration-tests` in `distributed-tracing-qe`. The sections below cover what the person who maintains the scenarios needs.
 
 The pipelines have no per-release parameters: their first task, `resolve-release`, reads the release from the FBC under test and from the `rhosdt-<art version>` branches at run time. Only the scenarios name the release, and only the latest release is supported and tested, so a new ART group replaces the scenarios of the previous release.
 
@@ -10,7 +10,7 @@ The pipelines have no per-release parameters: their first task, `resolve-release
 2. **Replace the scenarios** in `konflux-release-data`, in `tenants-config/cluster/kflux-ocp-p01/tenants/art-rhosdt-tenant/otel-integration-tests.yaml`: set the application (`fbc-rhosdt-<art version with dashes>`) and the names of the scenarios (`otel-e2e-tests-4-14-<art version with dashes>`, `otel-e2e-tests-4-22-<art version with dashes>`, `otel-upgrade-tests-4-22-<art version with dashes>`), and remove the scenarios of the previous group. Check the OCP versions too: the e2e scenarios run on the minimum and the maximum supported OCP version, and only the one with `run_dast` runs the DAST scan. The DAST results folder and the `rhosdt_version` parameter: "Operating the scenarios" below. The scenarios are optional, use the context `push`, and run the pipelines of `distributed-tracing-qe` from `main`.
 3. **Regenerate the manifests** from `tenants-config`: `./get-kustomize.sh <dir>` downloads kustomize, and `./build-single.sh art-rhosdt-tenant <dir>/kustomize` rewrites the files under `tenants-config/auto-generated/`. The YAML file must start with `---`, or the yamllint check of the merge request fails.
 4. **Open the merge request** to `releng/konflux-release-data` with one commit, rebased on `main` so that it can be fast-forwarded, and wait for the checks. Run `tox -e tenants-config-test` first if you can; it is the check of the repository.
-5. **Check the first runs** after the merge: the scenarios start with the next FBC build of the new group. See `otel-qe-release-testing-epic` for how they are checked, and `otel-art-reference` for how to check and re-run them.
+5. **Check the first runs** after the merge: the scenarios start with the next FBC build of the new group. See `/otel-qe-release-testing` for how they are checked, and `/otel-art-reference` for how to check and re-run them.
 
 ### When to change the pipelines
 
