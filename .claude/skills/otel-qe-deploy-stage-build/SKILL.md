@@ -6,7 +6,7 @@ description: Installs the OTEL operator from an ART stage build (the multi-arch 
 # Deploy the Stage/Product Build
 
 ## Step 0: Get a cluster
-If not already connected to an OpenShift cluster, use the `/otel-qe-prepare-cluster` skill to provision one.
+If not already connected to an OpenShift cluster, use the `/otel-provision-cluster` skill to provision one.
 
 ## Step 1: Give the cluster access to the stage registry
 

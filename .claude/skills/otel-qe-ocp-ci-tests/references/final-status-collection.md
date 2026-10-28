@@ -18,7 +18,7 @@ gh api repos/openshift/open-telemetry-opentelemetry-operator/commits/{SHA}/statu
 ```
 A context appears once per run, newest first; the first entry of each context is the result of its latest run (`success`, `failure`, `error`, `pending`). `pending` means testing is not finished; stop and say so. A job of the matrix with no status on the head commit was not run on that commit: look at the earlier commits of the PR (`gh pr view --json commits`) and report the newest run, and say on which commit it ran. A job with no status on any commit is **NOT RUN** in the table.
 
-**History.** Every run of a job, across PRs, commits and reruns, including aborted ones, is on its job history page of the private deck (`oc login` to `app.ci` first, see [browsing-artifacts.md](browsing-artifacts.md)); filter the `allBuilds` JSON of the page by `Refs.pulls[0].number == {PR_NUMBER}`:
+**History.** Every run of a job, across PRs, commits and reruns, including aborted ones, is on its job history page of the private deck (`oc login` to `app.ci` first, see `/otel-openshift-ci`); filter the `allBuilds` JSON of the page by `Refs.pulls[0].number == {PR_NUMBER}`:
 ```
 https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/job-history/gs/qe-private-deck/pr-logs/directory/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-{version}-art-build-{test}
 ```

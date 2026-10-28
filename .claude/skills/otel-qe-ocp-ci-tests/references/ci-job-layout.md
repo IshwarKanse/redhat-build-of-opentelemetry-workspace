@@ -21,9 +21,11 @@ The generated jobs are in `ci-operator/jobs/openshift/open-telemetry-opentelemet
 | `obs-ui-tests-runner` | `playwright-base` plus the repository in `/tmp/opentelemetry-operator` | the console UI test step |
 | `opentelemetry-collector` | not built here: the base image `ci/redhat-opentelemetry-collector:redhat-otel-collector`, promoted by the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` | `RELATED_IMAGE_COLLECTOR` |
 
+To pull one of these images locally, see `/otel-openshift-ci` (`references/images.md`): "Pipeline images" for the ones built here, "Promoted images" for the collector.
+
 ## Promoting the collector image
 
-The collector tag is static: the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` (`branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-<version>-images`) writes it, but only on a push to the collector branch. The collector config builds amd64 and arm64, so the tag is a manifest list once that postsubmit ran after the arm64 build was added; before that, the arm64 job fails at the collector pods. To run the postsubmit without a push, trigger it through gangway (`oc` logged in to `app.ci`, see [browsing-artifacts.md](browsing-artifacts.md)):
+The collector tag is static: the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` (`branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-<version>-images`) writes it, but only on a push to the collector branch. The collector config builds amd64 and arm64, so the tag is a manifest list once that postsubmit ran after the arm64 build was added; before that, the arm64 job fails at the collector pods. To run the postsubmit without a push, trigger it through gangway (`oc` logged in to `app.ci`, see `/otel-openshift-ci`):
 
 ```bash
 VERSION=<version>   # e.g. 0.158
@@ -33,7 +35,7 @@ printf 'Authorization: Bearer %s\n' "$(oc whoami -t)" | curl -s -X POST -H @- -H
   -d "{\"job_name\":\"branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images\",\"job_execution_type\":\"2\",\"refs\":{\"org\":\"openshift\",\"repo\":\"redhat-opentelemetry-collector\",\"base_ref\":\"rhosdt-${VERSION}\",\"base_sha\":\"${SHA}\"}}"
 ```
 
-The reply carries the execution id and the status `TRIGGERED`; gangway does not report progress. Follow the run on the public job history, `https://prow.ci.openshift.org/job-history/gs/test-platform-results/logs/branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images`: it takes about ten minutes, and `SUCCESS` means the image was promoted to the static tag.
+The reply carries the execution id and the status `TRIGGERED`; gangway does not report progress. Follow the run on the public job history, `https://prow.ci.openshift.org/job-history/gs/test-platform-results-public/logs/branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images`: it takes about ten minutes, and `SUCCESS` means the image was promoted to the static tag.
 
 ## The tests
 

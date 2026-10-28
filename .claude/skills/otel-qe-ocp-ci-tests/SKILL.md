@@ -24,7 +24,7 @@ The two modes run in separate sessions, usually days apart: collection starts on
 
 1. The `gh` CLI must be authenticated.
 2. `yq` on the PATH (Step 2), and a clone of `release` in the workspace (or `gh api` access to it) to read the job list.
-3. For artifacts and job history: the `oc` CLI logged into `app.ci` (`oc login --server=https://api.ci.l2s4.p1.openshiftapps.com:6443`), see [references/browsing-artifacts.md](references/browsing-artifacts.md). The results themselves come from GitHub and need no login.
+3. For artifacts and job history: the `oc` CLI logged into `app.ci`, see `/otel-openshift-ci` (login, and `references/logs-and-artifacts.md` for the logs). The results themselves come from GitHub and need no login.
 
 ## Steps
 
@@ -64,7 +64,7 @@ One job first, so a problem with the build or the branch shows up once and not e
 gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test art-build-e2e-ocp-4-21"
 ```
 
-When its `distributed-tracing-tests-opentelemetry-premerge` step has started the chainsaw tests (the `build-log.txt` prints the operator, collector and target allocator images under test and `Image of opentelemetry-operator-controller-manager`; see [references/browsing-artifacts.md](references/browsing-artifacts.md)), trigger the rest, every other job of the Step 2 list, on one line (`CONFIG` is the variable of Step 2):
+When its `distributed-tracing-tests-opentelemetry-premerge` step has started the chainsaw tests (the `build-log.txt` prints the operator, collector and target allocator images under test and `Image of opentelemetry-operator-controller-manager`; see `/otel-openshift-ci`, `references/logs-and-artifacts.md`), trigger the rest, every other job of the Step 2 list, on one line (`CONFIG` is the variable of Step 2):
 
 ```bash
 REST=$(yq '.tests[] | select(.optional == true) | .as' "$CONFIG" | grep -v '^e2e-ocp-4-21$' | sed 's/^/art-build-/' | paste -sd' ' -)
@@ -80,4 +80,4 @@ Behaviors to plan around:
 
 ### Step 4: Report
 
-Tell the user the PR, the jobs triggered, and that the results arrive as checks on the PR (`gh pr checks {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator`). For a failing job, check its `openshift-observability-qe-agent` step first ([references/browsing-artifacts.md](references/browsing-artifacts.md)).
+Tell the user the PR, the jobs triggered, and that the results arrive as checks on the PR (`gh pr checks {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator`). For a failing job, check its `openshift-observability-qe-agent` step first (`/otel-openshift-ci`, `references/logs-and-artifacts.md`).

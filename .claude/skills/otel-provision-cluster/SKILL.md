@@ -1,9 +1,9 @@
 ---
-name: otel-qe-prepare-cluster
-description: Provisions or connects to an OpenShift cluster for QE testing. Use when the user asks to get, provision, or connect to a cluster for QE testing.
+name: otel-provision-cluster
+description: Provisions or connects to an OpenShift cluster for development or testing. Use when the user asks to get, provision, or connect to an OpenShift cluster, for development or for QE testing.
 ---
 
-# Prepare QE Cluster
+# Provision a Cluster
 
 ## Provision a cluster
 If you're not already connected to an OpenShift cluster, you can either use:
@@ -25,11 +25,5 @@ If you're not already connected to an OpenShift cluster, you can either use:
 5. Wait approximately **1 hour** for the cluster to be provisioned.
 6. ClusterBot will send you the kubeconfig/login credentials once the cluster is ready.
 
-## Get the ART FBC image for OTEL
-The user must provide the ART version, which is the operator version (e.g. 0.158). Run:
-
-```bash
-bash .claude/skills/otel-art-reference/get-fbc-images.sh <art-version>
-```
-
-It lists the ART FBC catalog image for each supported OCP version. Pick the entry whose `ocp_version` matches the cluster (`oc get clusterversion version -o jsonpath='{.status.desired.version}'`, y-stream only, e.g. `v4.20`). The image is multi-arch, so the same entry works on amd64, arm64, ppc64le and s390x clusters. If the version has no entry, ask the user for the correct version.
+## Next
+To install the operator on the cluster: the ART stage build with `/otel-qe-deploy-stage-build` (it finds the ART FBC image for the cluster's OCP version), or a build from the upstream source with `/otel-qe-deploy-upstream-build`.

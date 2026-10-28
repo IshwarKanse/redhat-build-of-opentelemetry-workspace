@@ -14,6 +14,9 @@ The repositories are defined in:
 ### Jira
 - Project key: **TRACING** on `redhat.atlassian.net`
 
+### OpenShift CI
+- Logs, artifacts and run history of OpenShift CI jobs, and pulling images from CI (such as `ocp/builder:rhel-9-golang-*`, or an image a PR job built): use the `/otel-openshift-ci` skill.
+
 ### Git Workflow
 All repos use a **fork-based workflow**:
 1. Push to your fork, not `origin`

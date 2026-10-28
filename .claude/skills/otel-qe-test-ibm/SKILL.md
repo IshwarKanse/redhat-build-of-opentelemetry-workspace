@@ -7,7 +7,7 @@ description: Runs OpenTelemetry operator e2e tests on IBM P (ppc64le) and IBM Z 
 
 ## Prerequisites
 
-An IBM P or IBM Z cluster must already be provisioned and connected. Request one by contacting the IBM contacts listed in the `rhosdt-team` skill. Use `/otel-qe-prepare-cluster` to verify connectivity. Skip requesting/provisioning if a cluster is already logged in.
+An IBM P or IBM Z cluster must already be provisioned and connected. Request one by contacting the IBM contacts listed in the `rhosdt-team` skill. Verify the connection with `oc whoami` and `oc get clusterversion`; `/otel-provision-cluster` covers getting a cluster. Skip requesting/provisioning if a cluster is already logged in.
 
 ### Clean up leftover installs from a prior test run
 
