@@ -16,11 +16,11 @@
 # directly, since main requires PRs with an approving review (repo ruleset)
 # and rejects direct pushes — a human merges the report PR.
 #
+# Claude runs through the EnMaaS gateway (Red Hat's AI gateway for Engineering):
+# https://source.redhat.com/departments/products_and_global_engineering/workload_management/enmaas
+#
 # Required secrets:
-#   ANTHROPIC_API_KEY           — Anthropic API key for Claude
-#   OR (for Vertex AI):
-#   GCP_CREDENTIALS_JSON        — GCP service account key JSON
-#   ANTHROPIC_VERTEX_PROJECT_ID — GCP project ID
+#   ENMAAS_API_KEY — EnMaaS gateway key (from Atlas onboarding), not an Anthropic API key
 
 name: Regression Detection
 
@@ -106,15 +106,6 @@ jobs:
         run: |
           sudo apt-get install -y --no-install-recommends jq python3 python3-yaml
 
-      - name: Configure GCP credentials (Vertex AI)
-        if: vars.CLAUDE_CODE_USE_VERTEX == '1'
-        run: |
-          mkdir -p /tmp/gcp
-          echo "$GCP_CREDENTIALS_JSON" > /tmp/gcp/key.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp/key.json" >> "$GITHUB_ENV"
-        env:
-          GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
-
       - name: Use HTTPS for cloning (CI runner has no SSH key)
         run: git config --global url."https://github.com/".insteadOf "git@github.com:"
 
@@ -128,10 +119,8 @@ jobs:
           # issues: read, pull-requests: read — the AI agent below never has
           # write access, by design (see file header).
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_CODE_USE_VERTEX: ${{ vars.CLAUDE_CODE_USE_VERTEX || '' }}
-          CLOUD_ML_REGION: ${{ vars.CLOUD_ML_REGION || 'global' }}
-          ANTHROPIC_VERTEX_PROJECT_ID: ${{ vars.ANTHROPIC_VERTEX_PROJECT_ID || '' }}
+          ANTHROPIC_BASE_URL: https://api.enmaas.devshift.net
+          ANTHROPIC_API_KEY: ${{ secrets.ENMAAS_API_KEY }}
           # The regression-detection Workflow runs as a background task. In print
           # mode (`claude -p`), the CLI only waits up to this ceiling before killing
           # any still-running background task and exiting — without it, a workflow
@@ -212,10 +201,6 @@ jobs:
           else
             echo "No report generated. Check job logs for errors." >> "$GITHUB_STEP_SUMMARY"
           fi
-
-      - name: Cleanup credentials
-        if: always()
-        run: rm -f /tmp/gcp/key.json
 
   publish-report:
     needs: detect-regressions
