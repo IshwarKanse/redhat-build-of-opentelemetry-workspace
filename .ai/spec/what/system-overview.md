@@ -18,7 +18,7 @@ Only features documented in the product documentation are considered supported. 
 
 1. The product name is "Red Hat build of OpenTelemetry" (abbreviation: RHOSDT).
 2. The Jira project key is TRACING on `redhat.atlassian.net`.
-3. The product version tracks upstream OpenTelemetry Collector releases (e.g., RHOSDT 3.10 tracks collector 0.152.x).
+3. Product releases track upstream OpenTelemetry releases: the ART group and the product branches are named after the operator version (e.g., `rhosdt-0.158` tracks operator and collector 0.158.x). Advisories state the product version it maps to (operator 0.158.4 shipped as RHOSDT 3.11.4).
 
 ### Signal Support
 
@@ -39,7 +39,7 @@ Only features documented in the product documentation are considered supported. 
 ### Architecture Tiers
 
 11. The product consists of four container images: Operator, Collector, Target Allocator, and OLM Bundle.
-12. File-Based Catalogs (FBC) are generated per OpenShift version (4.12 through 4.22).
+12. File-Based Catalogs (FBC) are generated per OpenShift version (4.12 through 5.0).
 13. All container images support four architectures: amd64, arm64, ppc64le, s390x.
 
 ### Operator Features
@@ -62,10 +62,10 @@ Only features documented in the product documentation are considered supported. 
 
 ## Constraints
 
-1. All Go binaries must be compiled with `CGO_ENABLED=1 GOEXPERIMENT=strictfipsruntime -tags strictfipsruntime` for FIPS compliance.
-2. The collector binary must pass the FIPS check (no non-FIPS crypto functions like `decryptKey`/`encryptKey` from go-jose).
+1. All Go binaries must be compiled with `CGO_ENABLED=0 GOFIPS140=certified` for FIPS compliance, and the images must set `GODEBUG=fips140=auto`.
+2. The operator and the collector must pass the `fips-check` CI job: every non-FIPS crypto import is reviewed and listed in `fips-allowlist.yaml` on the product branch.
 3. Base container images must be UBI 9 (Red Hat Universal Base Image).
-4. The product must support the OpenShift version range defined in `konflux-opentelemetry/versions.sh` (currently OCP 4.12+).
+4. The product must support the OpenShift versions in `OCP_TARGET_VERSIONS` of the ART group (currently OCP 4.12 through 5.0).
 5. All repos use a fork-based Git workflow: push to fork, PR against origin/main, squash before pushing.
 6. Only features documented in the product documentation are supported. Undocumented features are not supported regardless of their presence in the source code.
 
