@@ -9,10 +9,11 @@ trap 'rm -rf "$TMPDIR"' EXIT
 REPO="${FBC_IMAGE%%@*}"
 REPO="${REPO%%:*}"
 
+# Newer oras releases (1.3.6 here) list the attached artifacts in .referrers, older ones in .manifests.
 DISCOVER_JSON=$(oras discover --format json "$FBC_IMAGE")
 
 DIGEST=$(echo "$DISCOVER_JSON" \
-  | jq -r '.manifests[] | select(.artifactType == "application/vnd.konflux-ci.attached-artifact" and .annotations.attachedMediaType == "application/vnd.konflux-ci.attached-artifact.related-images+json") | .digest')
+  | jq -r '(.referrers // .manifests)[] | select(.artifactType == "application/vnd.konflux-ci.attached-artifact" and .annotations.attachedMediaType == "application/vnd.konflux-ci.attached-artifact.related-images+json") | .digest')
 
 if [[ -z "$DIGEST" ]]; then
   echo "ERROR: no related-images.json artifact found on ${FBC_IMAGE}" >&2
@@ -27,7 +28,7 @@ if [[ ! -f "$TMPDIR/related-images.json" ]]; then
 fi
 
 CATALOG_DIGEST=$(echo "$DISCOVER_JSON" \
-  | jq -r '.manifests[] | select(.artifactType == "application/vnd.konflux-ci.attached-artifact" and .annotations.attachedMediaType == "application/vnd.konflux-ci.attached-artifact.rendered-catalog+json") | .digest')
+  | jq -r '(.referrers // .manifests)[] | select(.artifactType == "application/vnd.konflux-ci.attached-artifact" and .annotations.attachedMediaType == "application/vnd.konflux-ci.attached-artifact.rendered-catalog+json") | .digest')
 
 CATALOG_FILE=""
 if [[ -n "$CATALOG_DIGEST" ]]; then

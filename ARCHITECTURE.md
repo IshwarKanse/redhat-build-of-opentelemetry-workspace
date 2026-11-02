@@ -85,24 +85,26 @@ graph TD
 
     subgraph "Red Hat (downstream)"
         RHCol["redhat-opentelemetry-collector<br/>(component selection via manifest.yaml)"]
-        Konflux["konflux-opentelemetry<br/>(Dockerfiles, Tekton pipelines, OLM bundle)"]
+        RHOp["open-telemetry-opentelemetry-operator<br/>(product fork of the operator, OLM bundle)"]
+        ART["ocp-build-data<br/>(ART build configuration)"]
         Docs["openshift-docs<br/>(product documentation)"]
     end
 
     Core --> RHCol
     Contrib --> RHCol
-    RHCol -->|git submodule| Konflux
-    OpUp -->|git submodule| Konflux
-    Konflux -->|builds| Images["Container Images<br/>(operator, collector, target-allocator, bundle, FBC catalogs)"]
+    OpUp --> RHOp
+    RHCol -->|rhosdt-version branch| ART
+    RHOp -->|rhosdt-version branch| ART
+    ART -->|builds| Images["Container Images<br/>(operator, collector, target-allocator, bundle, FBC catalogs)"]
 ```
 
 ## Build Pipeline
 
 1. **Component selection**: `manifest.yaml` in `redhat-opentelemetry-collector` declares which upstream components to include
 2. **Code generation**: OpenTelemetry Collector Builder (OCB) generates Go source into `_build/`
-3. **Container build**: Konflux/Tekton pipelines build multi-arch (amd64, arm64, ppc64le, s390x) UBI9-based images with FIPS-compliant crypto
-4. **Bundle packaging**: upstream OLM bundle is patched with Red Hat metadata via `patch_csv.py`
-5. **Catalog generation**: per-OpenShift-version File-Based Catalogs (FBC) for OLM channel resolution
+3. **Container build**: ART builds multi-arch (amd64, arm64, ppc64le, s390x) UBI9-based images with FIPS-compliant crypto on Konflux, configured in `ocp-build-data`
+4. **Bundle packaging**: the community OLM bundle is edited with Red Hat metadata via `bundle/art.yaml` on the product branch
+5. **Catalog generation**: per-OpenShift-version File-Based Catalogs (FBC) for OLM channel resolution, built on top of the production operator index
 
 ## Key Architectural Decisions
 
@@ -110,8 +112,8 @@ graph TD
 
 **Fork-based workflow**: All contributions go through personal forks, not direct pushes to origin. Squash before merging.
 
-**FIPS compliance**: All Go binaries use `strictfipsruntime` build tags. A post-build FIPS check verifies no non-FIPS crypto functions are linked.
+**FIPS compliance**: All Go binaries are built with the Go FIPS module (`GOFIPS140=certified`). A `fips-check` CI job on the product branches fails on a non-FIPS crypto import that is not reviewed and listed in `fips-allowlist.yaml`.
 
-**Multi-version OCP support**: FBC catalogs are generated per OpenShift version (4.12-4.22), allowing version-specific operator compatibility.
+**Multi-version OCP support**: FBC catalogs are generated per OpenShift version (4.12-5.0), allowing version-specific operator compatibility.
 
 **Support level gating**: A feature must be documented in the product documentation to be considered supported. Source code presence alone is insufficient.

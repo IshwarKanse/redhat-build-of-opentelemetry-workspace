@@ -35,11 +35,13 @@ The critical e2e tests (the `e2e-pre-merge` job) already ran on every pull reque
 
 The checks of a patch release, and the checklist of `/otel-qe-release-testing` with the version (e.g. `0.159`).
 
+Review the SAST reports as well: ART builds run the Konflux SAST tasks by default, and each task attaches a SARIF report to the image. Anything important has to be fixed. The Snyk findings are in the [Snyk UI](https://app.snyk.io/org/red-hat-openshift-distributed-tracing/dashboard). `snapshot-security-analyzer` in `sast-report/` of [distributed-tracing/konflux](https://gitlab.cee.redhat.com/distributed-tracing/konflux) (no longer cloned by `make clone-repos`) renders the reports of a Snapshot as HTML. It was written for the old tenant and has not been run on `art-rhosdt-tenant` yet: pass `-n art-rhosdt-tenant`, and expect to need credentials for `art-images` on Quay.
+
 ## Run `release-from-fbc` pipeline
 Create the [pipeline CR](./release-from-fbc.yaml) or via [UI](https://console-openshift-console.apps.artc2023.pc3z.p1.openshiftapps.com/k8s/ns/art-rhosdt-tenant/tekton.dev~v1~Pipeline/release-from-fbc), replacing:
 * `<GROUP>` — e.g. `rhosdt-0.158` (the ocp-build-data group branch)
 * `<ASSEMBLY_VERSION>` — e.g. `0.158.0`
-* `<FBC_PULLSPECS>` — comma-separated FBC pullspecs from [get-fbc-images.sh](./get-fbc-images.sh)
+* `<FBC_PULLSPECS>` — comma-separated FBC pullspecs from [get-fbc-images.sh](./get-fbc-images.sh). When QE verified the fixes of the release with `/otel-qe-verify-fixes`, use the pullspecs of the build it verified.
 * `jira-bugs` — comma-separated list of JIRA issue IDs to include in the advisory. CVE trackers need correct component label e.g. `pscomponent:rhosdt/opentelemetry-rhel9-operator`
 * `force` — the template sets `false`. Set to `true` to override the existing shipment merge request.
 * `dry-run` — the template sets `true`. Set to `false` to actually create the shipment MR.

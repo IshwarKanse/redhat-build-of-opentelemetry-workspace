@@ -54,4 +54,4 @@ Read the release notes in the shipment merge request of `hybrid-platforms/art/oc
 
 ### 2.8 CVE and bug fixes
 
-`/otel-qe-verify-fixes`: look up each Jira issue and CVE of the release from the shipment merge request, verify the fix, and reply on the issue with the result. This is the one place Jira is written to.
+`/otel-qe-verify-fixes`: look up each Jira issue and CVE of the release (its Jira fix version), verify the fix on the ART build to release, and reply on the issue with the result. This is the one place Jira is written to.

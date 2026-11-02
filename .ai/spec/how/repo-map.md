@@ -41,10 +41,13 @@ Lookup table: concern → repo(s) → spec file(s). Use this to find where to go
 
 | Concern | Repo | Spec Files |
 |---|---|---|
-| Konflux build pipelines & component definitions | konflux-opentelemetry | `what/productization.md`, `how/build-pipeline.md` |
-| Product Operator bundle & catalog (OLM) | konflux-opentelemetry | `what/productization.md`, `how/build-pipeline.md` |
-| FIPS compliance | konflux-opentelemetry | `what/system-overview.md`, `what/productization.md` |
-| Multi-arch builds | konflux-opentelemetry | `what/productization.md` |
+| ART group & image build configuration | ocp-build-data (branch: `rhosdt-<version>`) | `what/productization.md`, `how/build-pipeline.md` |
+| ART Dockerfiles | open-telemetry-opentelemetry-operator, redhat-opentelemetry-collector | `what/productization.md`, `how/build-pipeline.md` |
+| Product Operator bundle (OLM) | open-telemetry-opentelemetry-operator (`bundle/`) | `what/productization.md`, `how/build-pipeline.md` |
+| FBC catalogs | ocp-build-data (`OCP_TARGET_VERSIONS`) | `what/productization.md`, `how/build-pipeline.md` |
+| Konflux tenant, release plans, integration test scenarios, MintMaker | konflux-release-data (`art-rhosdt-tenant`) | `what/productization.md`, `how/build-pipeline.md` |
+| FIPS compliance | open-telemetry-opentelemetry-operator, redhat-opentelemetry-collector (`fips-allowlist.yaml`) | `what/system-overview.md`, `what/productization.md` |
+| Multi-arch builds | ocp-build-data (`group.yml`) | `what/productization.md` |
 
 ## Documentation
 
@@ -66,9 +69,9 @@ These features span multiple repos:
 
 | Feature | Repos |
 |---|---|
-| Adding a new collector component | redhat-opentelemetry-collector, konflux-opentelemetry, openshift-docs |
-| OBI receiver features & k8s-cache | redhat-opentelemetry-collector, opentelemetry-operator, konflux-opentelemetry, openshift-docs |
-| New CRD or API field | opentelemetry-operator, konflux-opentelemetry, openshift-docs |
-| Version bump (upstream rebase) | redhat-opentelemetry-collector, opentelemetry-operator (submodules in konflux-opentelemetry) |
-| New OCP version support | konflux-opentelemetry (new FBC catalog + Dockerfile) |
+| Adding a new collector component | redhat-opentelemetry-collector, openshift-docs |
+| OBI receiver features & k8s-cache | redhat-opentelemetry-collector, opentelemetry-operator, open-telemetry-opentelemetry-operator (`bundle/`), ocp-build-data, konflux-release-data, openshift-docs |
+| New CRD or API field | opentelemetry-operator, open-telemetry-opentelemetry-operator (`bundle/`), openshift-docs |
+| Version bump (upstream rebase) | redhat-opentelemetry-collector, open-telemetry-opentelemetry-operator, ocp-build-data, konflux-release-data |
+| New OCP version support | ocp-build-data (`OCP_TARGET_VERSIONS`), konflux-release-data (integration test scenarios), release (pre-merge matrix) |
 | Cluster TLS profile adherence | opentelemetry-operator (profile fetch, operand injection, target allocator), opentelemetry-collector (`config/configtls` curve allowlist), openshift-docs |

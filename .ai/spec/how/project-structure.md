@@ -10,7 +10,9 @@ This is a multi-repo workspace. Each subdirectory is an independent Git reposito
 | `opentelemetry-collector-contrib/` | `github.com/open-telemetry/opentelemetry-collector-contrib` | ~241 community components (113 receivers, 47 exporters, 35 processors, 14 connectors, 31 extensions) |
 | `redhat-opentelemetry-collector/` | `github.com/openshift/redhat-opentelemetry-collector` | Component selection via `manifest.yaml`, OCB-generated source in `_build/`, RPM packaging |
 | `opentelemetry-operator/` | `github.com/open-telemetry/opentelemetry-operator` | Kubernetes operator: CRDs, controllers, auto-instrumentation injection, target allocator, OpAMP bridge |
-| `konflux-opentelemetry/` | — (not a Go module) | Produktization: Dockerfiles, Tekton pipelines, bundle patching, FBC catalogs, scripts |
+| `open-telemetry-opentelemetry-operator/` | `github.com/open-telemetry/opentelemetry-operator` | Product fork of the operator: `rhosdt-<version>` branches, ART Dockerfiles, OLM bundle configuration |
+| `ocp-build-data/` | — (YAML) | ART configuration on `rhosdt-<version>` branches: group, streams, image configs, assemblies |
+| `konflux-release-data/` | — (YAML) | Konflux configuration of the tenant `art-rhosdt-tenant`: release plans, integration test scenarios, MintMaker |
 | `openshift-docs/` | — (AsciiDoc) | Product documentation on branch `standalone-otel-docs-main` |
 
 ## Key Entry Points
@@ -26,10 +28,10 @@ This is a multi-repo workspace. Each subdirectory is an independent Git reposito
 | Auto-instrumentation injection | `opentelemetry-operator/internal/instrumentation/` |
 | Manifest generation | `opentelemetry-operator/internal/manifests/` |
 | Component selection | `redhat-opentelemetry-collector/manifest.yaml` |
-| Container builds | `konflux-opentelemetry/Dockerfile.*` |
-| Bundle patching | `konflux-opentelemetry/bundle-patch/` |
-| FBC catalogs | `konflux-opentelemetry/catalog/` |
-| Tekton pipelines | `konflux-opentelemetry/.tekton/` |
+| Container builds | `redhat-opentelemetry-collector/Dockerfile.art`, `open-telemetry-opentelemetry-operator/Dockerfile.art`, `open-telemetry-opentelemetry-operator/Dockerfile.ta.art` |
+| Bundle patching | `open-telemetry-opentelemetry-operator/bundle/art.yaml` |
+| ART group and images | `ocp-build-data/group.yml`, `ocp-build-data/images/` |
+| Release plans | `konflux-release-data/tenants-config/cluster/kflux-ocp-p01/tenants/art-rhosdt-tenant/` |
 | Doc topic map | `openshift-docs/_topic_maps/_topic_map.yml` |
 | Doc modules | `openshift-docs/modules/` |
 
@@ -37,6 +39,5 @@ This is a multi-repo workspace. Each subdirectory is an independent Git reposito
 
 - Upstream repos use Go module naming (`go.opentelemetry.io/collector`, `github.com/open-telemetry/...`).
 - Contrib components follow the pattern `<type>/<name><type>/` (e.g., `receiver/otlpreceiver/`, `exporter/debugexporter/`).
-- Konflux Dockerfiles are named `Dockerfile.<component>` (e.g., `Dockerfile.operator`, `Dockerfile.collector`).
-- FBC catalog Dockerfiles are named `Dockerfile-v4-<version>.catalog`.
-- Product branches are named `rhosdt-<version>` (e.g., `rhosdt-3.10`).
+- ART Dockerfiles are named `Dockerfile.art`, plus `Dockerfile.ta.art` for the target allocator.
+- Product branches are named `rhosdt-<version>` after the operator version (e.g., `rhosdt-0.158`).

@@ -58,7 +58,7 @@ Reports are written to `reports/` and committed by CI directly to `main` (also u
 
 ## How it stays current
 
-Everything is derived at runtime from the ART release branch `rhosdt-<version>`. The branch is named after the operator version (e.g. `rhosdt-0.158`). The legacy `konflux-opentelemetry` repo is not used.
+Everything is derived at runtime from the ART release branch `rhosdt-<version>`. The branch is named after the operator version (e.g. `rhosdt-0.158`).
 
 | What | Source |
 |------|--------|
