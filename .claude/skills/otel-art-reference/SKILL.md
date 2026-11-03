@@ -114,7 +114,7 @@ Konflux integration tests run on every FBC build in `art-rhosdt-tenant`. Where t
 
 ## Release Process
 
-See [RELEASE.md](RELEASE.md) for the release process, including stage/prod promotion and version update steps.
+See [RELEASE.md](RELEASE.md) for the release process (draft — will be completed after the first ART release), including stage/prod promotion and version update steps.
 
 ## Test builds
 
@@ -127,9 +127,15 @@ See [RELEASE.md](RELEASE.md) for the release process, including stage/prod promo
 1. **Apply the IDMS** — [idms.yaml](idms.yaml) mirrors `registry.redhat.io/rhosdt` to `registry.stage.redhat.io/rhosdt`. Remove any per-image OTEL mirror set left from the old Konflux flow to avoid conflicts. OCP 4.12 has no IDMS CRD; see `/otel-qe-deploy-stage-build` for the `ImageContentSourcePolicy` equivalent.
 1. **Create the CatalogSource** — use [catalog-source.yaml](catalog-source.yaml) as a template, replacing the `image` field with the FBC image from `get-fbc-images.sh` for the cluster's OCP version. See `/otel-qe-deploy-stage-build`'s `install-operators/otel.yaml` for a full example with Project, OperatorGroup, and Subscription.
 
-## Troubleshooting
+## Query old objects and logs from cluster
 
-[TROUBLESHOOTING.md](TROUBLESHOOTING.md): registry access, the content of a production catalog, old objects and logs from the cluster.
+Install KubeArchive `kubectl` plugin (`kubectl-ka`) https://konflux.pages.redhat.com/docs/users/faq/kubearchive.html
+
+```bash
+KA_HOST=$(oc get cm -n product-kubearchive kubearchive-api-url -o jsonpath='{.data.URL}')
+kubectl ka config set host $KA_HOST
+kubectl ka get pipelinerun
+```
 
 ## Get FBC content (related images and rendered catalog)
 

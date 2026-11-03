@@ -1,6 +1,6 @@
 ---
 name: otel-qe-deploy-upstream-build
-description: Build the OpenTelemetry Operator and its related images from the upstream open-telemetry/opentelemetry-operator source, then install the resulting bundle on a cluster and run the e2e test suites. Use when the user asks to build the operator from source/upstream, test an unreleased upstream change, or install a custom-built operator image locally. For installing the ART stage/product build instead, use otel-qe-deploy-stage-build.
+description: Build the OpenTelemetry Operator and its related images from the upstream open-telemetry/opentelemetry-operator source, then install the resulting bundle on a cluster and run the e2e test suites. Use when the user asks to build the operator from source/upstream, test an unreleased upstream change, or install a custom-built operator image locally. For installing the Konflux stage/product build instead, use otel-qe-deploy-stage-build.
 ---
 
 # Build and Install the Upstream Operator

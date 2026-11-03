@@ -27,23 +27,19 @@ By default this lists the latest FBC builds. To get FBCs of a specific commit, p
 ./get-fbc-images.sh 0.158 <commit-sha> > fbc-images.yaml
 ```
 
-The tests must pass on the build that goes into `release-from-fbc`. When the release carries fixes, that is the build `/otel-qe-verify-fixes` verified: pass its `pullspecs` to `check-its.sh` instead of a new list of the latest builds.
-
 To run a scenario again, label its Snapshot: `oc label --overwrite -n art-rhosdt-tenant snapshot <name> test.appstudio.openshift.io/run=<scenario>`. How to read a failed run: "Operating the scenarios" in `/otel-qe-prepare-ci` (`references/konflux-its.md`).
 
-The critical e2e tests (the `e2e-pre-merge` job) already ran on every pull request to the branch. A release that carries CVE or bug fixes needs them verified with `/otel-qe-verify-fixes` on the build to release, before `trigger-prod-release` releases it to prod (`registry.redhat.io`).
+The critical e2e tests (the `e2e-pre-merge` job) already ran on every pull request to the branch. CVE and bug fixes are verified on their issues with `/otel-qe-verify-fixes` when asked.
 
 ### Major or minor release (a new `rhosdt-<version>` branch and ART group)
 
 The checks of a patch release, and the checklist of `/otel-qe-release-testing` with the version (e.g. `0.159`).
 
-Review the SAST reports as well: ART builds run the Konflux SAST tasks by default, and each task attaches a SARIF report to the image. Anything important has to be fixed. The Snyk findings are in the [Snyk UI](https://app.snyk.io/org/red-hat-openshift-distributed-tracing/dashboard). `snapshot-security-analyzer` in `sast-report/` of [distributed-tracing/konflux](https://gitlab.cee.redhat.com/distributed-tracing/konflux) (no longer cloned by `make clone-repos`) renders the reports of a Snapshot as HTML. It was written for the old tenant and has not been run on `art-rhosdt-tenant` yet: pass `-n art-rhosdt-tenant`, and expect to need credentials for `art-images` on Quay.
-
 ## Run `release-from-fbc` pipeline
 Create the [pipeline CR](./release-from-fbc.yaml) or via [UI](https://console-openshift-console.apps.artc2023.pc3z.p1.openshiftapps.com/k8s/ns/art-rhosdt-tenant/tekton.dev~v1~Pipeline/release-from-fbc), replacing:
 * `<GROUP>` — e.g. `rhosdt-0.158` (the ocp-build-data group branch)
 * `<ASSEMBLY_VERSION>` — e.g. `0.158.0`
-* `<FBC_PULLSPECS>` — comma-separated FBC pullspecs from [get-fbc-images.sh](./get-fbc-images.sh). When QE verified the fixes of the release with `/otel-qe-verify-fixes`, use the pullspecs of the build it verified.
+* `<FBC_PULLSPECS>` — comma-separated FBC pullspecs from [get-fbc-images.sh](./get-fbc-images.sh)
 * `jira-bugs` — comma-separated list of JIRA issue IDs to include in the advisory. CVE trackers need correct component label e.g. `pscomponent:rhosdt/opentelemetry-rhel9-operator`
 * `force` — the template sets `false`. Set to `true` to override the existing shipment merge request.
 * `dry-run` — the template sets `true`. Set to `false` to actually create the shipment MR.
@@ -53,15 +49,7 @@ The pipeline creates a shipment merge request in [hybrid-platforms/art/ocp-shipm
 Review the MR (e.g. the release notes), approve it and wait until the Gitlab `release-stage` pipeline completes. Restart the individual jobs in case of failure.
 
 ## Run `trigger-prod-release` pipeline
-Run `trigger-prod-release` pipeline to continue the release to production registry. After this step a missing fix needs a new release, so first check, on the merge request you pass to the pipeline, that its FBC images are the build whose fixes were verified. `release-from-fbc` with `force: true` replaces the merge request, so a check on an earlier one does not count. Compare the output with the verified `pullspecs` (all OCP versions):
-
-```bash
-glab api --hostname gitlab.cee.redhat.com "projects/hybrid-platforms%2Fart%2Focp-shipment-data/merge_requests?search=<assembly>&in=title&state=all" | jq -r '.[] | "\(.iid) \(.state) \(.title)"'
-glab api --hostname gitlab.cee.redhat.com "projects/hybrid-platforms%2Fart%2Focp-shipment-data/merge_requests/<MR_IID>/changes" \
-  | jq -r '.changes[] | select(.new_path | contains(".fbc.")) | .diff' | grep -o 'containerImage: *[^ ]*' | awk '{print $2}' | sort -u
-```
-
-If they differ, or a fix of the release is missing, failed or not verified, do not run the pipeline: see step 6 of `/otel-qe-verify-fixes`.
+Run `trigger-prod-release` pipeline to continue the release to production registry.
 The pipeline takes argument the merge request from the previous step to [hybrid-platforms/art/ocp-shipment-data](https://gitlab.cee.redhat.com/hybrid-platforms/art/ocp-shipment-data/).
 
 Create the [pipeline CR](./trigger-prod-release.yaml), replacing:
