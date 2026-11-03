@@ -15,7 +15,7 @@ The OpenTelemetry Collector is a vendor-agnostic telemetry pipeline that receive
 
 5. The Red Hat distro selects components from upstream core and contrib via `manifest.yaml` in `redhat-opentelemetry-collector`.
 6. The OpenTelemetry Collector Builder (OCB) generates Go source from `manifest.yaml` and compiles the binary.
-7. Generated source is committed to `_build/` so downstream Konflux builds can compile from pre-generated sources.
+7. Generated source is committed to `_build/` so ART builds can compile from pre-generated sources.
 
 ### Receivers
 

@@ -178,10 +178,10 @@ spec:
 
 #### Productization
 
-38. A new Dockerfile must be added to `konflux-opentelemetry` following the existing UBI9 base pattern.
-39. A new Konflux Application/Component definition is required alongside the existing collector/operator/TA/bundle components.
-40. The k8s-cache image must be added to FBC catalogs.
-41. Multi-arch builds: amd64 and arm64 only, matching OBI receiver constraints.
+38. A new ART Dockerfile must be added on the product branch of the repository that builds the k8s-cache, following the existing `Dockerfile.art` pattern (UBI9 base, `FROM` lines that ART replaces at rebase time).
+39. A new image config `images/<name>.yml` is required in `ocp-build-data` on the `rhosdt-<version>` branch, with the operator in `dependents`, and the matching component in the `rhosdt-advisory-*` ReleasePlanAdmissions in `konflux-release-data`.
+40. The k8s-cache image must be a related image of the operator bundle (a `RELATED_IMAGE_*` variable in `bundle/art.yaml` and an entry in `bundle/image-references`), which carries it into the FBC catalogs.
+41. Multi-arch builds: amd64 and arm64 only, matching OBI receiver constraints, through `arches` in the image config. The rest of the ART group stays on four architectures.
 
 ## Configuration Surface
 
