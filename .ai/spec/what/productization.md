@@ -31,7 +31,7 @@ The productization pipeline transforms upstream OpenTelemetry components into su
 
 15. Patch and CVE fix release: a new build of the existing `rhosdt-<version>` branch, with no bundle or ART configuration changes.
 16. Major or minor release: new `rhosdt-<version>` branches in the source repositories, a new branch in `ocp-build-data` requested from the ART team, updated versions in `group.yml` and in the bundle files, moved pre-merge CI, new integration test scenarios, and new release plans and MintMaker configuration in `konflux-release-data`.
-17. The `release-from-fbc` pipeline creates a shipment merge request in `hybrid-platforms/art/ocp-shipment-data` and releases the images to stage again so that the Conforma checks run. After the merge request is approved, `trigger-prod-release` releases to the production registry.
+17. The `release-from-fbc` pipeline creates a shipment merge request in `hybrid-platforms/art/ocp-shipment-data` and releases the images to stage again so that the Conforma checks run. After the merge request is approved, `trigger-prod-release` releases to the production registry. Before that, the CVE and bug fixes of the release are verified on the build that the merge request names; a missing, failed or unverified fix stops the prod release.
 18. A release is an assembly of the ART group, named after the operator version (e.g., `0.158.4`). The advisory states the product version it maps to (operator 0.158.4 shipped as RHOSDT 3.11.4).
 19. Released images are tagged with the version in `group.yml`, not the assembly: `v0.158.0` and `v0.158.0-<n>` (assembly 0.158.4 is `v0.158.0-3`).
 20. Only the latest version is supported and tested.

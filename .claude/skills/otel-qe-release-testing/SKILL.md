@@ -1,6 +1,6 @@
 ---
 name: otel-qe-release-testing
-description: Step-by-step QE testing of a major or minor Red Hat build of OpenTelemetry (RHOSDT, OTEL operator) release, a new rhosdt-<version> branch and ART group - prepare the branch and CI, Konflux integration tests, the pre-merge e2e matrix with FIPS, arm64 and console UI, disconnected mirroring, IBM P and Z, release notes and docs, CVE and bug fix verification. Use whenever someone asks how to test, verify, qualify or sign off an RHOSDT or OpenTelemetry operator release, what the release testing checklist is, or which skill runs which part, even when they only name a version such as 0.158 or say "the next OTEL release". Patch and CVE fix releases need no QE testing.
+description: Step-by-step QE testing of a major or minor Red Hat build of OpenTelemetry (RHOSDT, OTEL operator) release, a new rhosdt-<version> branch and ART group - prepare the branch and CI, Konflux integration tests, the pre-merge e2e matrix with FIPS, arm64 and console UI, disconnected mirroring, IBM P and Z, release notes and docs, CVE and bug fix verification. Use whenever someone asks how to test, verify, qualify or sign off an RHOSDT or OpenTelemetry operator release, what the release testing checklist is, or which skill runs which part, even when they only name a version such as 0.158 or say "the next OTEL release". Patch and CVE fix releases need only the verification of their CVE and bug fixes (/otel-qe-verify-fixes) before the prod release.
 argument-hint: '{version} (e.g. "0.159"), the operator version of the major or minor release'
 ---
 
@@ -12,7 +12,7 @@ What QE runs and checks before a major or minor release of the Red Hat build of 
 
 Ask for the version if it was not given. The version is the operator version (ART version), for example `0.159`; it names the product branch `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator` and `openshift/redhat-opentelemetry-collector`, the ART group in `ocp-build-data`, the FBC tags and the Konflux application `fbc-rhosdt-<version with dashes>`. Only the latest version is supported and tested (rolling release model).
 
-This checklist is for a **major or minor release**: a new `rhosdt-<version>` branch and a new ART group (for example `0.158`). A **patch or CVE fix release** is a new build of the existing branch and needs no QE testing beyond the "Release checks" of `/otel-art-reference` (`RELEASE.md`): the critical `e2e-pre-merge` job already gated every pull request to the branch. When someone asks about a patch or CVE fix release, say that and stop; if the release carries CVE or bug fixes they want verified, that is `/otel-qe-verify-fixes` on its own.
+This checklist is for a **major or minor release**: a new `rhosdt-<version>` branch and a new ART group (for example `0.158`). A **patch or CVE fix release** is a new build of the existing branch and needs no QE testing beyond the "Release checks" of `/otel-art-reference` (`RELEASE.md`), the critical `e2e-pre-merge` job having already gated every pull request to the branch. Those checks include the CVE and bug fixes of the release: they must be verified with `/otel-qe-verify-fixes` before the build is released to prod (`registry.redhat.io`). When someone asks about a patch or CVE fix release, say that and stop.
 
 ## Step 2: The checklist
 

@@ -40,7 +40,7 @@ bundle/openshift + art.yaml + image-references → doozer ───────�
                                                                         ↓
 production index + new bundle → doozer, per OCP version ─────────→ FBC images
                                                                         ↓
-integration tests → release-from-fbc → shipment MR → trigger-prod-release → production
+integration tests, fix verification → release-from-fbc → shipment MR → trigger-prod-release → production
 ```
 
 The builds run automatically after a merge to a product branch:
