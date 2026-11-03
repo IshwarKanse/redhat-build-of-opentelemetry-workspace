@@ -38,7 +38,7 @@ EOF
 
 Wait until `oc get mcp` shows every pool `UPDATED=True` (about a minute) before Step 2. A catalog created while the nodes are still updating reports `TRANSIENT_FAILURE`, and the first Subscription resolution fails.
 
-If the cluster still has the OTEL mirror set from the old Konflux flow (the one applied from `konflux-opentelemetry`'s `.tekton/images-mirror-set.yaml`), delete it first: its per-image sources point at the legacy Konflux repositories, not at the ART images. Find it with `oc get imagedigestmirrorset` and look for `opentelemetry` sources.
+If the cluster still has the OTEL mirror set from the old Konflux flow (`otel-idms`), delete it first: its per-image sources point at the legacy Konflux repositories, not at the ART images. Find it with `oc get imagedigestmirrorset` and look for `opentelemetry` sources.
 
 ## Step 2: Install operators
 
@@ -54,7 +54,7 @@ The ART FBC is multi-arch (amd64, arm64, ppc64le, s390x), so one path covers amd
    bash .claude/skills/otel-art-reference/get-fbc-images.sh <art-version>
    ```
    If there is no entry for the cluster's version, stop and ask the user.
-3. Use `image` (the floating tag, which follows the latest ART build) for an ad-hoc install, or `image_by_digest` when reproducing a CI result.
+3. Use `image` (the floating tag, which follows the latest ART build) for an ad-hoc install, or `image_by_digest` when reproducing a CI result. To test one particular build, such as the build of a release, pass its operator commit as the second argument in step 2 and use `image_by_digest`.
 4. Replace `<OTEL_FBC_IMAGE>` in a copy of [`install-operators/otel.yaml`](install-operators/otel.yaml) and apply it:
    ```bash
    sed "s|<OTEL_FBC_IMAGE>|${OTEL_FBC_IMAGE}|" install-operators/otel.yaml | oc apply -f -

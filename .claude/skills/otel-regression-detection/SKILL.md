@@ -42,7 +42,7 @@ Repos must be cloned into the workspace directory first:
 make clone-repos
 ```
 
-Required repos: `ocp-build-data` (latest ART release branch), `redhat-opentelemetry-collector` (`manifest.yaml`), `open-telemetry-opentelemetry-operator` (`versions.txt`), `opentelemetry-operator`, `opentelemetry-collector-contrib`, `opentelemetry-collector`. The legacy `konflux-opentelemetry` repo is not used: the OpenTelemetry builds moved to ART.
+Required repos: `ocp-build-data` (latest ART release branch), `redhat-opentelemetry-collector` (`manifest.yaml`), `open-telemetry-opentelemetry-operator` (`versions.txt`), `opentelemetry-operator`, `opentelemetry-collector-contrib`, `opentelemetry-collector`.
 Optional: `openshift-docs` (doc validation), `distributed-tracing-qe` (QE test coverage).
 
 The `gh` CLI must be authenticated for GitHub issue/PR scanning.
