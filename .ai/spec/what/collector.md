@@ -164,6 +164,22 @@ The in-cluster (platform) and user workload monitoring (UWM) Prometheus instance
 |---|---|---|---|
 | Logs Transform | Processor | Upstream stability `development` (lowest tier). Explicitly slated for deprecation (#19775). Not in any upstream distribution. Use the Transform Processor (GA) + OTTL instead. | TRACING-6698 (cancelled) |
 
+## Promotion from TP to GA
+
+A component can move from TP to GA in any release. A component that misses a non-negotiable criterion stays TP; the team can promote a component that misses a negotiable one. The support level tables record a promotion in the Notes column (e.g., "Promoted from TP in 3.10.0").
+
+### Non-negotiable
+
+1. The component is included in the upstream core (`otelcol`) or contrib (`otelcol-contrib`) distribution.
+2. Customers request GA for the component, or 20% of customers use it, or a core product feature uses it. The 20% threshold is provisional.
+3. The team and the PM agree to support the component as GA.
+4. The component is not `deprecated` upstream.
+
+### Negotiable
+
+5. The upstream [stability level](https://github.com/open-telemetry/opentelemetry-collector?tab=readme-ov-file#stability-levels) of the component is `stable` or `beta`.
+6. The component has a low ratio of open to closed upstream issues: closed issues outnumber open issues at least 3 to 1.
+
 ## Constraints
 
 1. Adding or removing a component from the Red Hat distro requires updating `manifest.yaml` in `redhat-opentelemetry-collector` and regenerating `_build/`.

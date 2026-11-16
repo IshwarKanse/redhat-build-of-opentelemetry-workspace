@@ -254,7 +254,7 @@ Document OTTL-based log transformation patterns in the Transform Processor docs 
 
 ## Constraints
 
-1. All new components enter as TP. Promotion to GA requires: upstream stability at Beta or higher, no open P1/security bugs, production validation on OCP, and complete documentation.
+1. All new components enter as TP. Promotion to GA follows the criteria in `what/collector.md` (Promotion from TP to GA). For these components it also requires: upstream stability at Beta or higher, no open P1/security bugs, production validation on OCP, and complete documentation.
 2. The logs transform processor is excluded from the distro despite having a TRACING ticket. The ticket should be closed as "Won't Do" with a reference to this spec.
 3. The syslog exporter's frame injection bug (#49234) must be tracked and ideally fixed before any consideration of GA promotion. Until the shipped upstream version contains a fix, users must be warned in docs that log attributes containing newlines may forge additional syslog records on newline-delimited transports, with `enable_octet_counting: true` (RFC 5424) as the mitigation.
 4. The webhook event receiver's path validation bug (#50893) must be fixed upstream before any consideration of GA promotion. Until the shipped upstream version contains a fix, docs must state that `path` and `health_path` must start with `/`.

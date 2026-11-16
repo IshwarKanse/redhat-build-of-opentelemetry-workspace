@@ -25,6 +25,7 @@ AI agents. Content is optimized for precision and machine consumption.
 |---|---|
 | Understand the product | `what/system-overview.md` |
 | Understand the collector pipeline | `what/collector.md` |
+| Understand promotion of a collector component from TP to GA | `what/collector.md` (Promotion from TP to GA) |
 | Understand CRDs and the operator | `what/operator.md` |
 | Understand cluster TLS profile adherence | `what/tls-profile.md` |
 | Understand auto-instrumentation | `what/auto-instrumentation.md` |
