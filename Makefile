@@ -5,9 +5,7 @@ REPOS = \
 	open-telemetry/opentelemetry-collector-contrib \
 	open-telemetry/opentelemetry-operator \
 	openshift/open-telemetry-opentelemetry-operator \
-	os-observability/opentelemetry-operator \
 	openshift/redhat-opentelemetry-collector \
-	os-observability/konflux-opentelemetry \
 	openshift/openshift-docs \
 	openshift/distributed-tracing-console-plugin \
 	openshift/logging-view-plugin \
@@ -17,33 +15,24 @@ REPOS = \
 	openshift-eng/ocp-build-data
 
 GITLAB_REPOS = \
-	git@gitlab.cee.redhat.com:distributed-tracing/konflux.git \
 	git@gitlab.cee.redhat.com:releng/konflux-release-data.git
 
-# os-observability/opentelemetry-operator shares its basename with the upstream
-# open-telemetry/opentelemetry-operator, so it's cloned into os-observability-opentelemetry-operator.
-REPO_DIRS = $(foreach r,$(filter-out os-observability/opentelemetry-operator,$(REPOS)),$(notdir $(r))) os-observability-opentelemetry-operator $(foreach r,$(GITLAB_REPOS),$(basename $(notdir $(r))))
+REPO_DIRS = $(notdir $(REPOS)) $(foreach r,$(GITLAB_REPOS),$(basename $(notdir $(r))))
 
 SKILLSAW_IMAGE := ghcr.io/stbenjam/skillsaw:latest
 
 # Clone all workspace repos into this directory
-# konflux-opentelemetry: --recurse-submodules to populate operator and collector submodules
 # openshift-docs: --single-branch --branch to clone the standalone otel docs branch
-# os-observability/opentelemetry-operator: cloned as os-observability-opentelemetry-operator to
-#   avoid colliding with the upstream open-telemetry/opentelemetry-operator directory
 # GitLab repos: require VPN connection to Red Hat network
 clone-repos:
 	@for repo in $(REPOS); do \
 	  name=$$(basename $$repo); \
-	  dir=$$name; \
-	  if [ "$$repo" = "os-observability/opentelemetry-operator" ]; then dir="os-observability-opentelemetry-operator"; fi; \
-	  if [ -d "$$dir/.git" ]; then \
-	    echo "=== $$dir already cloned ==="; \
+	  if [ -d "$$name/.git" ]; then \
+	    echo "=== $$name already cloned ==="; \
 	  else \
 	    flags=""; \
-	    if [ "$$name" = "konflux-opentelemetry" ]; then flags="--recurse-submodules"; fi; \
 	    if [ "$$name" = "openshift-docs" ]; then flags="--single-branch --branch standalone-otel-docs-main"; fi; \
-	    git clone $$flags git@github.com:$$repo.git $$dir; \
+	    git clone $$flags git@github.com:$$repo.git; \
 	  fi; \
 	done
 	@for repo in $(GITLAB_REPOS); do \

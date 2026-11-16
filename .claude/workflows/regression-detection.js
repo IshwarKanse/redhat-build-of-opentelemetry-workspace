@@ -248,7 +248,6 @@ const releaseVersion = a.release_version || ''
 //   redhat-opentelemetry-collector        → manifest.yaml: component list, dist.version
 //   open-telemetry-opentelemetry-operator → versions.txt: operator=<upstream version>
 //   opentelemetry-operator (upstream)     → tag v<operator version>: the operator base commit
-// konflux-opentelemetry is the legacy build repo (it only builds Tempo now) and is not used.
 phase('Discover')
 
 // release_version reaches shell commands in the prompt below, so accept only <major>.<minor>.

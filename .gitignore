@@ -4,18 +4,20 @@ opentelemetry-collector/
 opentelemetry-collector-contrib/
 redhat-opentelemetry-collector/
 opentelemetry-operator/
-midstream-opentelemetry-operator/
-konflux-opentelemetry/
 openshift-docs/
 distributed-tracing-console-plugin/
 logging-view-plugin/
 multicluster-observability-addon/
 distributed-tracing-qe/
 release/
-konflux/
 konflux-release-data/
 ocp-build-data/
 open-telemetry-opentelemetry-operator/
+
+# No longer part of the workspace; ignored so that old local clones are not committed
+midstream-opentelemetry-operator/
+konflux-opentelemetry/
+konflux/
 
 # Regression detection — reports are committed; only the CI bookkeeping marker is ignored
 reports/.last-reported-version
