@@ -6,7 +6,7 @@ All OpenShift CI jobs of the OpenTelemetry operator product branch `rhosdt-<vers
 ci-operator/config/openshift/open-telemetry-opentelemetry-operator/openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>__art-build.yaml
 ```
 
-The variant is `art-build`: the images are built from the ART Dockerfiles of the branch (`Dockerfile.art`, `Dockerfile.ta.art`, `bundle/openshift`). The file name carries no OpenShift version; every test picks its own. Only the supported branch has the config; it moves to the new branch with each new ART group (`/otel-qe-prepare-ci`).
+The variant is `art-build`: the images are built from the ART Dockerfiles of the branch (`Dockerfile.art`, `Dockerfile.ta.art`, `bundle/openshift`). The file name carries no OpenShift version; every test picks its own. With each new ART group the config moves to the new branch, or is copied while the previous version still has CVE or patch releases (`/otel-qe-prepare-ci`); pick the config of the branch under test.
 
 The generated jobs are in `ci-operator/jobs/openshift/open-telemetry-opentelemetry-operator/openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>-presubmits.yaml`, named `pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-<version>-art-build-<test>`, with the check `ci/prow/art-build-<test>` and the trigger `/test art-build-<test>`.
 
@@ -19,13 +19,13 @@ The generated jobs are in `ci-operator/jobs/openshift/open-telemetry-opentelemet
 | `opentelemetry-bundle` | `bundle/openshift` of the PR | `operator-sdk run bundle` in the `install` step |
 | `obs-tests-runner` | `tests/e2e-openshift/Dockerfile` of the PR (chainsaw, oc, the repository in `/tmp/opentelemetry-operator`) | the e2e test step |
 | `obs-ui-tests-runner` | `playwright-base` plus the repository in `/tmp/opentelemetry-operator` | the console UI test step |
-| `opentelemetry-collector` | not built here: the base image `ci/redhat-opentelemetry-collector:redhat-otel-collector`, promoted by the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` | `RELATED_IMAGE_COLLECTOR` |
+| `opentelemetry-collector` | not built here: the base image `ci/redhat-opentelemetry-collector:<tag>`, where `<tag>` is `redhat-otel-collector` for `rhosdt-0.158` and `rhosdt-<version>` for the branches after it, once step 8 of `/otel-qe-prepare-ci` switched the branch (until then the tag of the previous branch), promoted by the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` | `RELATED_IMAGE_COLLECTOR` |
 
 To pull one of these images locally, see `/otel-openshift-ci` (`references/images.md`): "Pipeline images" for the ones built here, "Promoted images" for the collector.
 
 ## Promoting the collector image
 
-The collector tag is static: the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` (`branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-<version>-images`) writes it, but only on a push to the collector branch. The collector config builds amd64 and arm64, so the tag is a manifest list once that postsubmit ran after the arm64 build was added; before that, the arm64 job fails at the collector pods. To run the postsubmit without a push, trigger it through gangway (`oc` logged in to `app.ci`, see `/otel-openshift-ci`):
+Each branch has its own collector tag (`redhat-otel-collector` for `rhosdt-0.158`, `rhosdt-<version>` after it): the `rhosdt-<version>` postsubmit of `openshift/redhat-opentelemetry-collector` (`branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-<version>-images`) writes it, but only on a push to the collector branch. The collector config builds amd64 and arm64, so the tag is a manifest list once that postsubmit ran after the arm64 build was added; before that, the arm64 job fails at the collector pods. To run the postsubmit without a push, trigger it through gangway (`oc` logged in to `app.ci`, see `/otel-openshift-ci`):
 
 ```bash
 VERSION=<version>   # e.g. 0.158
@@ -35,7 +35,7 @@ printf 'Authorization: Bearer %s\n' "$(oc whoami -t)" | curl -s -X POST -H @- -H
   -d "{\"job_name\":\"branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images\",\"job_execution_type\":\"2\",\"refs\":{\"org\":\"openshift\",\"repo\":\"redhat-opentelemetry-collector\",\"base_ref\":\"rhosdt-${VERSION}\",\"base_sha\":\"${SHA}\"}}"
 ```
 
-The reply carries the execution id and the status `TRIGGERED`; gangway does not report progress. Follow the run on the public job history, `https://prow.ci.openshift.org/job-history/gs/test-platform-results-public/logs/branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images`: it takes about ten minutes, and `SUCCESS` means the image was promoted to the static tag.
+The reply carries the execution id and the status `TRIGGERED`; gangway does not report progress. Follow the run with the `get_prow_job_history` tool of the openshift-ci MCP server (`/otel-openshift-ci`), job `branch-ci-openshift-redhat-opentelemetry-collector-rhosdt-${VERSION}-images` with `job_type: postsubmit` (for the first run on a new branch, an error that `latest-build.txt` does not exist means the run has not started uploading yet: try again in a minute): it takes about ten minutes, and `SUCCESS` means the image was promoted to its tag.
 
 ## The tests
 

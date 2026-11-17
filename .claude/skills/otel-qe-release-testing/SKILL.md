@@ -24,7 +24,7 @@ Run the parts in this order; the later ones depend on the earlier ones.
 
 ### 2.2 Prepare CI
 
-`/otel-qe-prepare-ci`: the pre-merge CI config in `openshift/release` and the Konflux integration test scenarios in `konflux-release-data` for the new branch.
+`/otel-qe-prepare-ci`: the pre-merge CI config in `openshift/release` and the Konflux integration test scenarios in `konflux-release-data` for the new branch, moved or copied from the previous one (the skill asks which), with the changes of the upstream CI jobs carried over.
 
 ### 2.3 Konflux integration tests
 

@@ -18,11 +18,13 @@ gh api repos/openshift/open-telemetry-opentelemetry-operator/commits/{SHA}/statu
 ```
 A context appears once per run, newest first; the first entry of each context is the result of its latest run (`success`, `failure`, `error`, `pending`). `pending` means testing is not finished; stop and say so. A job of the matrix with no status on the head commit was not run on that commit: look at the earlier commits of the PR (`gh pr view --json commits`) and report the newest run, and say on which commit it ran. A job with no status on any commit is **NOT RUN** in the table.
 
-**History.** Every run of a job, across PRs, commits and reruns, including aborted ones, is on its job history page of the private deck (`oc login` to `app.ci` first, see `/otel-openshift-ci`); filter the `allBuilds` JSON of the page by `Refs.pulls[0].number == {PR_NUMBER}`:
-```
-https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/job-history/gs/qe-private-deck/pr-logs/directory/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-{version}-art-build-{test}
-```
-The PR history page (`.../pr-history?org=openshift&repo=open-telemetry-opentelemetry-operator&pr={PR_NUMBER}`) shows the same per PR when the deck indexes the repository; if it comes back empty, use the job history pages. Use them to fill the `Runs` column (count and earlier results) and when the statuses look incomplete. The `target_url` of a status is the Spyglass page of that run.
+**History.** Every run of a job on the PR, across commits and reruns, including aborted ones, comes from the `get_prow_job_history` tool of the `openshift-ci` MCP server (`/otel-openshift-ci`), one call per job of the matrix:
+- `job_name`: `pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-{version}-art-build-{test}`
+- `deck`: `qe-private`, `pr`: `{PR_NUMBER}`, `org_repo`: `openshift/open-telemetry-opentelemetry-operator`
+
+It returns the PR's runs newest first, each with its result, commit (`pr_sha`) and Spyglass link; a note that the PR directory does not exist means the job never ran on the PR, or its runs have aged out of storage: if the job has a status on the PR (above), report that result and say its run logs are gone, not NOT RUN.
+
+Use the history to fill the `Runs` column (count and earlier results) and when the statuses look incomplete. The `target_url` of a status is the Spyglass page of that run. The job history page of the private deck stays the link for people in the table below.
 
 **Take the result of the most recent run of each job.** An earlier failure that was later fixed and reran green is a PASS; note the rerun in passing rather than reporting the stale failure.
 
