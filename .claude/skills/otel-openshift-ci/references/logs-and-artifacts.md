@@ -10,22 +10,34 @@ Prow uploads the logs and artifacts of a job to a storage bucket chosen per repo
 | `qe-private-deck` | the repositories listed with `bucket: qe-private-deck`, e.g. `openshift/openshift-tests-private`, `openshift/verification-tests` and the Distributed Tracing repositories, and the `/pj-rehearse` runs of their jobs on `openshift/release` | `https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com` | `https://gcsweb-qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/qe-private-deck/` | app.ci token (SKILL.md) |
 | `origin-ci-private` | the hidden jobs of the `openshift-priv` organization | `https://deck-internal-ci.apps.ci.l2s4.p1.openshiftapps.com` | `https://gcsweb-private-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-private/` | app.ci token |
 
+The openshift-ci MCP server reads the first two rows; `origin-ci-private` is listed only so its links can be recognized, and this skill does not read it.
+
 The Distributed Tracing jobs report to `qe-private-deck` so that only authorized users can see their logs and artifacts: `openshift/distributed-tracing-qe` since 2023 (`openshift/release` PR 43301), and the operator forks `openshift/open-telemetry-opentelemetry-operator` and `openshift/grafana-tempo-operator` since 2024 (PR 54572). The collector repository `openshift/redhat-opentelemetry-collector` is not on that list, so its jobs are public.
 
 The Details link of a check on the PR (`gh pr checks {PR} --repo {org}/{repo}`) is the Spyglass page of the run: its host tells which row applies, and its last path element is the build ID. The private runs are not on public Prow or in Sippy.
 
 The public bucket is `test-platform-results-public` since 2026-09-15. Links into the older `test-platform-results` bucket open a page that says the artifacts were "archived to a private bucket"; its Artifacts link is an SSO-protected page for a browser, which refuses the app.ci token. Use the `test-platform-results-public` form of the same path: the runs since then are there.
 
-With the token, read a private page or file as:
-```bash
-printf 'Authorization: Bearer %s\n' "$(oc whoami -t)" | curl -sf -H @- <url>
-```
+## Reading with the openshift-ci MCP server
+
+Read runs only with the tools of the openshift-ci MCP server (SKILL.md; if they are missing, ask the user to install it). Pass the Details link of the check (or any Spyglass or gcsweb link of the run) as `run_url`; the deck follows from its host.
+
+| Need | Tool call |
+|---|---|
+| Result, timing, refs, the pass/fail of every step with failure excerpts, the test directories | `get_prow_job_run` (`failed_steps`, `steps[].step`, `test_dirs`) |
+| A step's `build-log.txt` | `get_prow_artifact_content` with `step` (the `step` field above) and `test` (one of `test_dirs`, needed when there are several) |
+| The ci-operator verdict at the end of the top-level `build-log.txt` | `get_prow_artifact_content` with `tail_lines: 100`: `Step {test}-{step} failed`, `Some steps failed:` and `Reporting job state` are the last lines |
+| Any other text file (`prowjob.json`, a JUnit XML, `qe-agent-analysis.md`) | `get_prow_artifact_content` with `path`, plus `head_lines`, `tail_lines` or `grep` |
+| The files of a directory | `get_prow_artifacts` with `path` (one directory per call) |
+| The runs of a job, or of one PR | `get_prow_job_history` ("Finding a run" below) |
+
+Limits of the content tool: it returns the last 200 lines unless told otherwise, at most 1 MiB, and it clips lines over 4 KiB without setting `truncated`. For a whole file pass `head_lines: 100000` and `max_bytes: 1048576`, and use it only when `mode` is `head`, `truncated` is false, the text has no `[line clipped]`, and it parses (JSON as JSON, XML as XML). `ci-operator-step-graph.json` is one line of more than 1 MiB and never passes: use `failed_steps` instead. `grep` stops after `max_matches` (default 50), so check `truncated` before treating a missing line as absent.
 
 ## The files of a run
 
-A run's path is `pr-logs/pull/{org}_{repo}/{pr-number}/{job-name}/{build-id}` for a presubmit, and `logs/{job-name}/{build-id}` for a postsubmit or periodic (the path of a run is always the one in its Details or job-history link; prefer that over building it). For `openshift/origin` the `{org}_{repo}` part is left out, and a batch run (several PRs tested together before a merge) has `batch` in place of the PR number. Its files are at `{gcsweb}/{path}/` and its Spyglass page at `{deck}/view/gs/{bucket}/{path}`. Example, the files of the `e2e-ocp-4-21` job of the operator's product branch on PR 346:
+A run's path is `pr-logs/pull/{org}_{repo}/{pr-number}/{job-name}/{build-id}` for a presubmit, and `logs/{job-name}/{build-id}` for a postsubmit or periodic (the path of a run is always the one in its Details or job-history link; prefer that over building it). For `openshift/origin` the `{org}_{repo}` part is left out, and a batch run (several PRs tested together before a merge) has `batch` in place of the PR number. Its files are at `{gcsweb}/{path}/` and its Spyglass page at `{deck}/view/gs/{bucket}/{path}`. Example, the Spyglass page of the `e2e-pre-merge` job of the operator's product branch on PR 747:
 ```
-https://gcsweb-qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/qe-private-deck/pr-logs/pull/openshift_open-telemetry-opentelemetry-operator/346/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-0.158-art-build-e2e-ocp-4-21/2110463341993398272/
+https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/view/gs/qe-private-deck/pr-logs/pull/openshift_open-telemetry-opentelemetry-operator/747/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-0.158-art-build-e2e-pre-merge/2120450495439966208
 ```
 
 - `{org}_{repo}`: `openshift_open-telemetry-opentelemetry-operator`; `openshift_release` for a `/pj-rehearse` run on a release PR, where the job name carries the `rehearse-{release-pr}-` prefix.
@@ -39,7 +51,7 @@ In a run's directory:
 - `artifacts/ci-operator-step-graph.json`: every input, image build and test of the run, with `"failed": true` on the ones that failed.
 - `artifacts/{test}/{step}/`: one directory per step, with the step's `build-log.txt`, its JUnit XML and the files it saved. `sidecar-logs.json` holds the detailed logs of the sidecar containers, important for debugging test failures.
 
-While a job runs, its files are not uploaded yet: the deck streams the ci-operator log at `{deck}/log?job={job-name}&id={build-id}`. Once the pod is gone that endpoint answers 404; use the files above.
+While a job runs, `get_prow_job_run` reports `state: running`, and the files of the run directory (`build-log.txt`, `finished.json`, `junit_operator.xml`, so `steps` and `failed_steps` too) come only when it finishes. Each step's directory is uploaded as soon as that step ends, though: `artifacts/{test}/{step}/finished.json` (`"passed": true` or `false`) and its `build-log.txt` can be read with `get_prow_artifact_content` while the rest of the job still runs (`get_prow_artifacts` with `path: artifacts/{test}/` lists the steps that have ended).
 
 ## Example: the steps of the OpenTelemetry operator's e2e jobs
 
@@ -51,8 +63,8 @@ The step refs are in `ci-operator/step-registry/` of `openshift/release`; a step
 
 ## Why a job failed
 
-1. Find what failed: `jq -r '.[] | select(.failed) | .name' ci-operator-step-graph.json` names the image build or test, and the top-level `build-log.txt` names the step inside a test, at its end: `Step {test}-{step} failed after ...` before `Some steps failed:`.
-2. Read that step's own `build-log.txt` and JUnit XML in `artifacts/{test}/{step}/`. A failed image build has its log in `artifacts/build-logs/`.
+1. Find what failed: `get_prow_job_run` lists `failed_steps` (image builds and multi-stage steps) with a failure excerpt each. The end of the top-level `build-log.txt` (`tail_lines: 100`) names the step inside a test: `Step {test}-{step} failed after ...` before `Some steps failed:`.
+2. Read that step's own `build-log.txt` and JUnit XML in `artifacts/{test}/{step}/` (`get_prow_artifact_content` with `step`, or `path` for the JUnit XML). A failed image build has its log in `artifacts/build-logs/`.
 3. If the job has an `openshift-observability-qe-agent` step (the observability QE jobs, the OpenTelemetry ones included) and its tests failed, read that step next (below).
 
 ### The qe-agent step of the observability jobs
@@ -66,7 +78,5 @@ The `openshift-observability-qe-agent` step reruns failures, diagnoses flaky vs.
 
 ## Finding a run
 
-`gh pr checks {PR} --repo {org}/{repo}` prints the Details link of the latest run of every check. A rerun replaces the check; for earlier runs:
+`gh pr checks {PR} --repo {org}/{repo}` prints the Details link of the latest run of every check. A rerun replaces the check; for earlier runs, use `get_prow_job_history` with `job_name` and `deck` (`qe-private` for the private deck). With `pr` and `org_repo` (`openshift/open-telemetry-opentelemetry-operator`; derived for `rehearse-*` jobs) it lists only that PR's runs, aborted ones included, newest first. Without `pr` it lists every run of the job; `job_type: postsubmit` or `periodic` for jobs outside `pr-logs`. Page with `start_build_id: next_start_build_id`; `limit` is at most 100. A note that the PR directory does not exist means the job never ran on that PR, or its runs have aged out of storage.
 
-- Every run of one job across all PRs, commits and reruns, aborted ones included: `{deck}/job-history/gs/{bucket}/pr-logs/directory/{job-name}` for presubmits and rehearsals, `{deck}/job-history/gs/{bucket}/logs/{job-name}` for postsubmits and periodics (`{bucket}` from the table above). The page embeds `var allBuilds = [...]`; filter its entries by `Refs.pulls[0].number` for one PR.
-- Every run of every job of one PR: `{deck}/pr-history?org={org}&repo={repo}&pr={PR}`. It can come back empty when the deck does not index the repository, and it never lists rehearsals; use the job history then.

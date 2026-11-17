@@ -24,7 +24,7 @@ The two modes run in separate sessions, usually days apart: collection starts on
 
 1. The `gh` CLI must be authenticated.
 2. `yq` on the PATH (Step 2), and a clone of `release` in the workspace (or `gh api` access to it) to read the job list.
-3. For artifacts and job history: the `oc` CLI logged into `app.ci`, see `/otel-openshift-ci` (login, and `references/logs-and-artifacts.md` for the logs). The results themselves come from GitHub and need no login.
+3. For artifacts and job history: the openshift-ci MCP server (v0.6.0 or newer), installed by the user, with `OPENSHIFT_CI_TOKEN` from an `oc` login to `app.ci` for the private deck. It is the only way these steps read CI job data: `/otel-openshift-ci` has the install steps, the login, and `references/logs-and-artifacts.md` for the logs; if the server's tools are missing, ask the user to install it and wait. The results themselves come from GitHub and need no login.
 
 ## Steps
 
@@ -64,7 +64,7 @@ One job first, so a problem with the build or the branch shows up once and not e
 gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test art-build-e2e-ocp-4-21"
 ```
 
-When its `distributed-tracing-tests-opentelemetry-premerge` step has started the chainsaw tests (the `build-log.txt` prints the operator, collector and target allocator images under test and `Image of opentelemetry-operator-controller-manager`; see `/otel-openshift-ci`, `references/logs-and-artifacts.md`), trigger the rest, every other job of the Step 2 list, on one line (`CONFIG` is the variable of Step 2):
+While it runs, read `artifacts/e2e-ocp-4-21/install-operators/finished.json` of the run with `get_prow_artifact_content` (`run_url`: the Details link of its check). Its steps are `install` (the bundle), `install-operators` and `distributed-tracing-tests-opentelemetry-premerge`, and a step's directory is uploaded when that step ends (`/otel-openshift-ci`, `references/logs-and-artifacts.md`); until then the file is not found. `"passed": true` means the images built, the operators installed and the chainsaw tests have started: the build and the branch are fine, so trigger the rest. If `install` or `install-operators` failed (`"passed": false`; read that step's log with `get_prow_artifact_content` and `step`), or the job ended before them (an image build, `NoClusters`: `failed_steps` of `get_prow_job_run`), fix that before triggering the rest. Trigger the rest, every other job of the Step 2 list, on one line (`CONFIG` is the variable of Step 2):
 
 ```bash
 REST=$(yq '.tests[] | select(.optional == true) | .as' "$CONFIG" | grep -v '^e2e-ocp-4-21$' | sed 's/^/art-build-/' | paste -sd' ' -)
@@ -80,4 +80,4 @@ Behaviors to plan around:
 
 ### Step 4: Report
 
-Tell the user the PR, the jobs triggered, and that the results arrive as checks on the PR (`gh pr checks {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator`). For a failing job, check its `openshift-observability-qe-agent` step first (`/otel-openshift-ci`, `references/logs-and-artifacts.md`).
+Tell the user the PR, the jobs triggered, and that the results arrive as checks on the PR (`gh pr checks {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator`). For a failing job, check its `openshift-observability-qe-agent` step first (`get_prow_job_run` on the Details link, then `get_prow_artifact_content` with `step: openshift-observability-qe-agent`; `/otel-openshift-ci`, `references/logs-and-artifacts.md`).
