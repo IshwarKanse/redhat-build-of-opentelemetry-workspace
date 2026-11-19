@@ -6,7 +6,7 @@ argument-hint: '{version} [pr-number] to run the matrix (e.g. "0.158", or "0.158
 
 # OpenTelemetry e2e matrix in OpenShift CI
 
-The full e2e test matrix of the Red Hat build of OpenTelemetry operator runs in OpenShift CI as **optional presubmits of the product branch** `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator`. Each job builds the operator, the target allocator and the OLM bundle from the pull request, installs them on a cluster of one OpenShift version (or variant: FIPS, arm64, console UI) and runs the chainsaw suite of the pull request. The jobs do not run on their own: they are started with `/test <job>` comments on a pull request, and a failure does not block the merge. Job list, config and artifact locations: [references/ci-job-layout.md](references/ci-job-layout.md). Read it first.
+The full e2e test matrix of the Red Hat build of OpenTelemetry operator runs in OpenShift CI as **optional presubmits of the product branch** `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator`, started with `/test <job>` comments on a pull request. What the jobs build and test, the job list, the config and the artifact locations: [references/ci-job-layout.md](references/ci-job-layout.md). Read it first.
 
 The shipped artifact, the ART FBC, is not what these jobs test. The Konflux integration tests (ITS) cover it on every build; see `/otel-art-reference` (`RELEASE.md`, "Release checks").
 
@@ -24,7 +24,7 @@ The two modes run in separate sessions, usually days apart: collection starts on
 
 1. The `gh` CLI must be authenticated.
 2. `yq` on the PATH (Step 2), and a clone of `release` in the workspace (or `gh api` access to it) to read the job list.
-3. For artifacts and job history: the openshift-ci MCP server (v0.6.0 or newer), installed by the user, with `OPENSHIFT_CI_TOKEN` from an `oc` login to `app.ci` for the private deck. It is the only way these steps read CI job data: `/otel-openshift-ci` has the install steps, the login, and `references/logs-and-artifacts.md` for the logs; if the server's tools are missing, ask the user to install it and wait. The results themselves come from GitHub and need no login.
+3. For artifacts and job history: the openshift-ci MCP server, set up and logged in to the private deck as `/otel-openshift-ci` describes (if its tools are missing, ask the user to install it and wait). The results themselves come from GitHub and need no login.
 
 ## Steps
 
@@ -41,7 +41,7 @@ The jobs run on a pull request to `rhosdt-{VERSION}`. Never open a pull request 
    The test-preparation PR is the best choice when it is open: the tests the jobs run are the ones it changes. Any other PR of the process works; a PR that merges while the jobs run keeps its statuses, only a new commit on it aborts them.
 3. If none is open, say so and wait for the next one; do not create one.
 
-`{PR_NUMBER}` is the number of the chosen PR. The always-run jobs (`art-build-images`, `art-build-ci-bundle-opentelemetry-bundle`, `art-build-e2e-pre-merge`) start on their own; wait for `art-build-images` to pass before Step 3, the optional jobs build the same images and fail the same way.
+`{PR_NUMBER}` is the number of the chosen PR. The always-run jobs (`art-build-images`, `art-build-ci-bundle-opentelemetry-bundle`, `art-build-fips-check`, `art-build-e2e-pre-merge`) start on their own; wait for `art-build-images` to pass before Step 3, the optional jobs build the same images and fail the same way.
 
 ### Step 2: List the jobs of the matrix
 
@@ -52,7 +52,7 @@ CONFIG=release/ci-operator/config/openshift/open-telemetry-opentelemetry-operato
 yq '.tests[] | select(.optional == true) | .as' "$CONFIG"
 ```
 
-The always-run `e2e-pre-merge` job is not in that list; it starts on its own and is part of the matrix results all the same (Step 5).
+The always-run `e2e-pre-merge` and `fips-check` jobs are not in that list; they start on their own and are part of the matrix results all the same (Step 5).
 
 Every name is triggered as `/test art-build-<name>` (variant prefix `art-build`). `/test ?` as a PR comment lists them as well. Every job in that list is part of release testing; none is skipped without the user saying so.
 

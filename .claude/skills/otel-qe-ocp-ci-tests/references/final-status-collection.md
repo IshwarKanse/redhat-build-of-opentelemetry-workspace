@@ -8,13 +8,13 @@
 
 ### Step 5: Collect the final job status
 
-Every job of the matrix must have a result, not only the ones that were triggered. The expected jobs are the optional tests of the config (Step 2 of the skill) plus the always-run `e2e-pre-merge`, which belongs in the table too. Compare that list with the statuses of the PR.
+Every job of the matrix must have a result, not only the ones that were triggered. The expected jobs are the optional tests of the config (Step 2 of the skill) plus the always-run `e2e-pre-merge` and `fips-check`, which belong in the table too. Compare that list with the statuses of the PR.
 
 **Statuses from GitHub.** Prow posts one status per job and commit, context `ci/prow/art-build-<test>`:
 ```bash
 gh pr view {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --json headRefOid -q .headRefOid
 gh api repos/openshift/open-telemetry-opentelemetry-operator/commits/{SHA}/statuses --paginate \
-  --jq '.[] | select(.context|startswith("ci/prow/art-build-e2e-")) | "\(.state)\t\(.context)\t\(.target_url)"'
+  --jq '.[] | select((.context|startswith("ci/prow/art-build-e2e-")) or .context=="ci/prow/art-build-fips-check") | "\(.state)\t\(.context)\t\(.target_url)"'
 ```
 A context appears once per run, newest first; the first entry of each context is the result of its latest run (`success`, `failure`, `error`, `pending`). `pending` means testing is not finished; stop and say so. A job of the matrix with no status on the head commit was not run on that commit: look at the earlier commits of the PR (`gh pr view --json commits`) and report the newest run, and say on which commit it ran. A job with no status on any commit is **NOT RUN** in the table.
 
