@@ -64,7 +64,7 @@ Everything is derived at runtime from the ART release branch `rhosdt-<version>`.
 |------|--------|
 | Release branch | Highest `rhosdt-*` branch in `ocp-build-data` (or `--release-version`) |
 | Component list | `redhat-opentelemetry-collector`, branch `rhosdt-<version>`, `manifest.yaml` |
-| Collector base version | `manifest.yaml` → `dist.version` |
+| Collector base version | `manifest.yaml` → most common v0.x component gomod version, per repo (core and contrib separately, repo taken from the gomod path; v1.x modules and modules from other repos are not counted). A repo without v0.x components uses the `x.y.0` release of the other repo's base, then `dist.version`, which is the downstream version and can be a downstream-only patch such as `0.163.2` |
 | Operator base version | `open-telemetry-opentelemetry-operator`, branch `rhosdt-<version>`, `versions.txt` → `operator=` |
 | Operator base commit | Upstream `opentelemetry-operator` tag `v<operator version>` |
 | Doc coverage | Glob `openshift-docs/otel-collector/modules/*.adoc` |

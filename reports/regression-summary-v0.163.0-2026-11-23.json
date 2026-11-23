@@ -1,0 +1,10 @@
+{
+  "summary_counts": {
+    "critical": 12,
+    "high": 11,
+    "medium": 25,
+    "low": 30,
+    "total": 78
+  },
+  "operator_version": "v0.163.0"
+}
