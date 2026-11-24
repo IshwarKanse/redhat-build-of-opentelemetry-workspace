@@ -19,7 +19,7 @@ Detect regressions and breaking changes in upstream OpenTelemetry repositories c
 
 The workflow has 4 phases:
 
-1. **Discover** — resolves the ART release branch `rhosdt-<version>` (the highest one in `ocp-build-data`, or the one given with `--release-version`), parses `manifest.yaml` of that branch in `redhat-opentelemetry-collector` to get the exact component list and collector base version, reads `operator=` from `versions.txt` of the same branch in `open-telemetry-opentelemetry-operator` and resolves the upstream tag of that version as the operator base, then globs `openshift-docs` for doc files. Cross-references to find drift. No static component registry needed.
+1. **Discover** — resolves the ART release branch `rhosdt-<version>` (the highest one in `ocp-build-data`, or the one given with `--release-version`), parses `manifest.yaml` of that branch in `redhat-opentelemetry-collector` to get the exact component list and the upstream collector base versions (per repo, the most common v0.x version the core or contrib component gomods are pinned to, not `dist.version`, which can be a downstream-only patch; see the README for the fallback order), reads `operator=` from `versions.txt` of the same branch in `open-telemetry-opentelemetry-operator` and resolves the upstream tag of that version as the operator base, then globs `openshift-docs` for doc files. Cross-references to find drift. No static component registry needed.
 
 2. **Setup** — validates repos exist, fetches latest upstream, verifies base tags
 

@@ -22,7 +22,13 @@ const DEVIATIONS_PROPERTY = {
   },
 }
 
+// The same repos can be cloned more than once on a machine (for example in the main
+// workspace and in a .claude/worktrees/<name> worktree, with different branches checked
+// out). An agent that resolves a repo path against another clone silently analyzes the
+// wrong content, as the 2026-11-23 run's doc validation did, so every prompt pins this.
 const DEVIATIONS_INSTRUCTION = `
+
+Repo locations: every relative repo path in these instructions is relative to your current working directory (run pwd first). Read files and run git only in those paths. Never read or run git in another clone of the same repo, such as a workspace root above a .claude/worktrees directory, even when a command in the right path is refused; report the refusal in deviations instead. When you report a repo's HEAD, give its commit SHA.
 
 Also return "deviations": an array of short notes on anywhere your actual approach differed from these instructions as written — a command, path, or pattern that didn't work as described and needed a workaround, an assumption above that turned out wrong, a step you had to skip or improvise around, etc. Empty array if everything worked exactly as written. This feeds into a report section that helps improve this workflow's instructions over time — be specific and factual, not speculative.`
 
@@ -299,7 +305,7 @@ For each entry, extract:
   - repo: "collector_contrib" if the module starts with "github.com/open-telemetry/opentelemetry-collector-contrib/", or "collector_core" if it starts with "go.opentelemetry.io/collector/"
   - version: the version string
 
-Also extract dist.version from the top of the file — this is the downstream base collector version (collector_version).
+Also extract dist.version from the top of the file as collector_version. It is the downstream distro version and can carry a downstream-only patch that has no upstream tag (e.g. 0.163.2 while the components are v0.163.0); the upstream base tags are derived from the component versions, so report every component version exactly as the manifest lists it.
 
 STEP 4: GLOB DOCS
 ${docsPath ? `List all doc module files in: ${docsPath}/otel-collector/modules/
@@ -325,7 +331,6 @@ STEP 6: Return the complete discovery result.${DEVIATIONS_INSTRUCTION}`, {
 if (
   !discovery ||
   !discovery.release_branch ||
-  !discovery.collector_version ||
   !discovery.operator_base_commit ||
   !discovery.operator_base_version ||
   !discovery.components ||
@@ -366,7 +371,7 @@ const SEVERITIES = [
 const anchor = (title) => title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')
 
 function buildRemediationMarkdown(findings, meta) {
-  const { operatorBase, operatorVersion, upstreamOperatorVersion, contribBase, releaseBranch, componentsCount, documentedCount, summaryCounts, coverageMatrix, operatorFeatureMatrix, docDrift, deviations } = meta
+  const { operatorBase, operatorVersion, upstreamOperatorVersion, contribBase, coreBase, distVersion, releaseBranch, componentsCount, documentedCount, summaryCounts, coverageMatrix, operatorFeatureMatrix, docDrift, deviations } = meta
 
   const inlineList = (arr) => (arr && arr.length ? arr.join(', ') : '—')
 
@@ -442,7 +447,7 @@ ${deviations && deviations.length ? deviations.map(d => `- ${d}`).join('\n') : '
 
 | Field | Value |
 |---|---|
-| Downstream base | operator \`${operatorBase}\` (v${operatorVersion}), collector \`${contribBase}\` |
+| Downstream base | operator \`${operatorBase}\` (v${operatorVersion}), collector \`${distVersion ? 'v' + distVersion : 'unknown'}\` (upstream bases: contrib \`${contribBase}\`, core \`${coreBase}\`) |
 | Upstream target | origin/main (latest release: ${upstreamOperatorVersion}) |
 | Release branch | ${releaseBranch} |
 | Components in build | ${componentsCount} |
@@ -462,16 +467,97 @@ ${severityBody}
 ${[coverageGapsSection, driftSection, deviationsSection].filter(Boolean).join('\n')}`
 }
 
-const collectorBaseVersion = discovery.collector_version
-const contribBase = 'v' + collectorBaseVersion
-const coreBase = 'v' + collectorBaseVersion
+// dist.version in manifest.yaml is the downstream distro version and can carry a
+// downstream-only patch (e.g. 0.163.2) that has no upstream tag. The upstream base
+// of each repo is the version its component gomods are pinned to: the most common
+// v0.x version among that repo's components (v1.x modules use path-prefixed tags,
+// so they are not counted). A repo without v0.x components takes the other repo's
+// base, then dist.version as the last resort.
+const parseV0 = v => (/^v?(0\.\d+\.\d+)$/.exec(String(v || '').trim()) || [])[1]
+const compareSemver = (a, b) => {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] - pb[i]
+  return 0
+}
+// The repo is derived from the gomod path, not the agent's label: the manifest can
+// also list modules from neither repo (e.g. go.opentelemetry.io/obi/collector),
+// which the schema still forces into collector_core or collector_contrib.
+const upstreamRepoOf = c => {
+  const mod = String(c.gomod || '').trim().replace(/^gomod:\s*/, '')
+  if (mod.startsWith('github.com/open-telemetry/opentelemetry-collector-contrib/')) return 'collector_contrib'
+  if (mod.startsWith('go.opentelemetry.io/collector/')) return 'collector_core'
+  return mod ? 'other' : c.repo
+}
+const otherModules = discovery.components.filter(c => upstreamRepoOf(c) === 'other')
+if (otherModules.length > 0) {
+  log(`Not from collector core or contrib, left out of the base versions: ${otherModules.map(c => String(c.gomod).trim().replace(/^gomod:\s*/, '').split(/\s+/)[0] + '@' + c.version).join(', ')}.`)
+}
+// Every later step routes on c.repo, so core and contrib modules get it from their
+// gomod path here once. Other modules keep the agent's label and stay in the report.
+discovery.components = discovery.components.map(c => {
+  const repo = upstreamRepoOf(c)
+  return repo === 'other' ? c : { ...c, repo }
+})
+function majorityV0Version(repo) {
+  const counts = {}
+  for (const c of discovery.components) {
+    if (upstreamRepoOf(c) !== repo) continue
+    const v = parseV0(c.version)
+    if (v) counts[v] = (counts[v] || 0) + 1
+  }
+  const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1] || compareSemver(a[0], b[0]))
+  if (ranked.length > 1 && ranked[0][1] === ranked[1][1]) {
+    // Ties are broken toward the lower version, so the diff covers more history.
+    log(`WARNING: ${repo} components are split evenly between versions (${ranked.map(([v, n]) => `v${v}: ${n}`).join(', ')}); using the lower one, v${ranked[0][0]}.`)
+  }
+  return ranked[0]?.[0]
+}
+const distVersion = parseV0(discovery.collector_version) || String(discovery.collector_version || '').trim().replace(/^v/, '')
+const contribVote = majorityV0Version('collector_contrib')
+const coreVote = majorityV0Version('collector_core')
+// Core and contrib release patches separately, so a base borrowed from the other repo
+// uses its x.y.0 release, which both repos tag.
+const minorRelease = v => v && v.replace(/^(0\.\d+)\.\d+$/, '$1.0')
+const contribVersion = contribVote || minorRelease(coreVote) || distVersion
+const coreVersion = coreVote || minorRelease(contribVote) || distVersion
+if (!contribVersion || !coreVersion) {
+  log('ERROR: Discovery phase failed — no upstream collector base version: no v0.x component gomod version and no dist.version. Aborting.')
+  return {
+    report_markdown: `# Regression Detection — Failed\n\nDiscovery phase failed. No upstream collector base version could be derived: the components of manifest.yaml in ${rhCollectorPath} have no v0.x gomod version and dist.version is empty.`,
+    summary_counts: { critical: 0, high: 0, medium: 0, low: 0, total: 0 },
+    operator_version: 'unknown',
+  }
+}
+if (!contribVote && !coreVote) {
+  log(`WARNING: no core/contrib component has a v0.x gomod version; falling back to manifest dist.version (v${distVersion}) as the upstream base of both repos. It can be a downstream-only version without an upstream tag.`)
+} else {
+  if (!contribVote) log(`WARNING: no contrib component has a v0.x gomod version; using v${contribVersion}, the minor release of the core base v${coreVersion}, for contrib.`)
+  if (!coreVote) log(`WARNING: no core component has a v0.x gomod version; using v${coreVersion}, the minor release of the contrib base v${contribVersion}, for core.`)
+  if (contribVersion !== distVersion || coreVersion !== distVersion) {
+    log(`manifest dist.version is ${distVersion ? 'v' + distVersion : 'empty'}; using the component gomod versions as the upstream bases: contrib v${contribVersion}, core v${coreVersion}.`)
+  }
+}
+// Components pinned to another version than their repo's base are analyzed from that
+// base anyway; list them so the reader knows their diffs start from the wrong version.
+const offBaseComponents = discovery.components.filter(c => {
+  const v = parseV0(c.version)
+  if (!v) return false
+  const repo = upstreamRepoOf(c)
+  return (repo === 'collector_contrib' && v !== contribVersion) || (repo === 'collector_core' && v !== coreVersion)
+})
+if (offBaseComponents.length > 0) {
+  log(`WARNING: ${offBaseComponents.length} component(s) are pinned to another version than their repo's base and are analyzed from the base anyway: ${offBaseComponents.map(c => `${c.source_dir}@${c.version}`).join(', ')}.`)
+}
+const contribBase = 'v' + contribVersion
+const coreBase = 'v' + coreVersion
 const operatorBase = discovery.operator_base_commit
 const operatorVersion = discovery.operator_base_version
 const releaseBranch = discovery.release_branch
 const components = discovery.components
 const docDrift = discovery.documented_but_missing || []
 
-log(`Discovered ${components.length} components. Collector: v${collectorBaseVersion}, Operator: ${operatorBase} (v${operatorVersion}), Branch: ${releaseBranch}. ${docDrift.length} doc-only.`)
+log(`Discovered ${components.length} components. Collector: ${distVersion ? 'v' + distVersion : 'unknown'} (upstream bases: contrib ${contribBase}, core ${coreBase}), Operator: ${operatorBase} (v${operatorVersion}), Branch: ${releaseBranch}. ${docDrift.length} doc-only.`)
 
 // ── Phase 2: Setup ──
 phase('Setup')
@@ -530,7 +616,7 @@ if (!setup.qe_ok) qePath = ''
 // so the workflow never returns an unusable empty filename segment.
 const upstreamOperatorVersion = setup.upstream_operator_version || operatorVersion
 
-log(`Setup complete. Analyzing ${operatorBase} / ${contribBase} → upstream HEAD (${upstreamOperatorVersion}).${!setup.docs_ok ? ' Docs repo unavailable — skipping doc validation.' : ''}${!setup.qe_ok ? ' QE repo unavailable — QE coverage will show none.' : ''}`)
+log(`Setup complete. Analyzing ${operatorBase} / contrib ${contribBase} / core ${coreBase} → upstream HEAD (${upstreamOperatorVersion}).${!setup.docs_ok ? ' Docs repo unavailable — skipping doc validation.' : ''}${!setup.qe_ok ? ' QE repo unavailable — QE coverage will show none.' : ''}`)
 
 // Build the list of source dirs for code-diff and doc-validation agents
 const contribComponents = components.filter(c => c.repo === 'collector_contrib')
@@ -841,7 +927,7 @@ const allDeviations = [
 
 const report = await agent(`You are synthesizing regression detection findings into structured data. Do NOT write Markdown yourself — a separate, non-agent step renders the report mechanically from the structured data you return here. Your job is dedup, classification, and grouping only.
 
-DOWNSTREAM BASE: operator ${operatorBase} (v${operatorVersion}), collector ${contribBase}
+DOWNSTREAM BASE: operator ${operatorBase} (v${operatorVersion}), collector ${distVersion ? 'v' + distVersion : 'unknown'} (upstream bases: contrib ${contribBase}, core ${coreBase})
 UPSTREAM TARGET: origin/main
 RELEASE BRANCH: ${releaseBranch}
 COMPONENTS IN BUILD: ${components.length} (discovered from manifest.yaml)
@@ -892,6 +978,8 @@ const reportMarkdown = buildRemediationMarkdown(report.findings_rendered, {
   operatorVersion,
   upstreamOperatorVersion,
   contribBase,
+  coreBase,
+  distVersion,
   releaseBranch,
   componentsCount: components.length,
   documentedCount: documentedComponents.length,
