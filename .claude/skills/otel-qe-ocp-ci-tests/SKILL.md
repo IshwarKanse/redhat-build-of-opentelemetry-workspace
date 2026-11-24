@@ -6,7 +6,7 @@ argument-hint: '{version} [pr-number] to run the matrix (e.g. "0.158", or "0.158
 
 # OpenTelemetry e2e matrix in OpenShift CI
 
-The full e2e test matrix of the Red Hat build of OpenTelemetry operator runs in OpenShift CI as **optional presubmits of the product branch** `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator`. Each job builds the operator, the target allocator and the OLM bundle from the pull request, installs them on a cluster of one OpenShift version (or variant: FIPS, arm64, console UI) and runs the chainsaw suite of the pull request. The jobs do not run on their own: they are started with `/test <job>` comments on a pull request, and a failure does not block the merge. Job list, config and artifact locations: [references/ci-job-layout.md](references/ci-job-layout.md). Read it first.
+The full e2e test matrix of the Red Hat build of OpenTelemetry operator runs in OpenShift CI as **optional presubmits of the product branch** `rhosdt-<version>` of `openshift/open-telemetry-opentelemetry-operator`, started with `/test <job>` comments on a pull request. What the jobs build and test, the job list, the config and the artifact locations: [references/ci-job-layout.md](references/ci-job-layout.md). Read it first.
 
 The shipped artifact, the ART FBC, is not what these jobs test. The Konflux integration tests (ITS) cover it on every build; see `/otel-art-reference` (`RELEASE.md`, "Release checks").
 
@@ -24,7 +24,7 @@ The two modes run in separate sessions, usually days apart: collection starts on
 
 1. The `gh` CLI must be authenticated.
 2. `yq` on the PATH (Step 2), and a clone of `release` in the workspace (or `gh api` access to it) to read the job list.
-3. For artifacts and job history: the openshift-ci MCP server (v0.6.0 or newer), installed by the user, with `OPENSHIFT_CI_TOKEN` from an `oc` login to `app.ci` for the private deck. It is the only way these steps read CI job data: `/otel-openshift-ci` has the install steps, the login, and `references/logs-and-artifacts.md` for the logs; if the server's tools are missing, ask the user to install it and wait. The results themselves come from GitHub and need no login.
+3. For artifacts and job history: the openshift-ci MCP server, set up and logged in to the private deck as `/otel-openshift-ci` describes (if its tools are missing, ask the user to install it and wait). The results themselves come from GitHub and need no login.
 
 ## Steps
 
@@ -41,7 +41,7 @@ The jobs run on a pull request to `rhosdt-{VERSION}`. Never open a pull request 
    The test-preparation PR is the best choice when it is open: the tests the jobs run are the ones it changes. Any other PR of the process works; a PR that merges while the jobs run keeps its statuses, only a new commit on it aborts them.
 3. If none is open, say so and wait for the next one; do not create one.
 
-`{PR_NUMBER}` is the number of the chosen PR. The always-run jobs (`art-build-images`, `art-build-ci-bundle-opentelemetry-bundle`, `art-build-e2e-pre-merge`) start on their own; wait for `art-build-images` to pass before Step 3, the optional jobs build the same images and fail the same way.
+`{PR_NUMBER}` is the number of the chosen PR. The always-run jobs (`art-build-images`, `art-build-ci-bundle-opentelemetry-bundle`, `art-build-fips-check`, `art-build-e2e-pre-merge`) start on their own; wait for `art-build-images` to pass before Step 3, the optional jobs build the same images and fail the same way.
 
 ### Step 2: List the jobs of the matrix
 
@@ -52,23 +52,26 @@ CONFIG=release/ci-operator/config/openshift/open-telemetry-opentelemetry-operato
 yq '.tests[] | select(.optional == true) | .as' "$CONFIG"
 ```
 
-The always-run `e2e-pre-merge` job is not in that list; it starts on its own and is part of the matrix results all the same (Step 5).
+The always-run `e2e-pre-merge` and `fips-check` jobs are not in that list; they start on their own and are part of the matrix results all the same (Step 5).
 
 Every name is triggered as `/test art-build-<name>` (variant prefix `art-build`). `/test ?` as a PR comment lists them as well. Every job in that list is part of release testing; none is skipped without the user saying so.
 
 ### Step 3: Trigger the jobs
 
-One job first, so a problem with the build or the branch shows up once and not eight times. Use a job on a warm hive pool (`e2e-ocp-4-21`, or the plain job of the current GA version):
+One job first, so a problem with the build or the branch shows up once and not in every job. Use the plain full-suite job of the newest OpenShift version: it runs the most tests, and the pool of the lowest version keeps no cluster ready. If its pool is empty too (`NoClusters`), wait and rerun it. `CONFIG` is the variable of Step 2; a new shell needs it set again:
 
 ```bash
-gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test art-build-e2e-ocp-4-21"
+FIRST=$(yq '.tests[] | select(.optional == true) | .as' "$CONFIG" | grep -E '^e2e-ocp-[0-9]+-[0-9]+$' | sort -t- -k3,3n -k4,4n | tail -1)
+gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test art-build-${FIRST:?no plain e2e-ocp-<x>-<y> job in $CONFIG}"
+echo "First job: ${FIRST}"
 ```
 
-While it runs, read `artifacts/e2e-ocp-4-21/install-operators/finished.json` of the run with `get_prow_artifact_content` (`run_url`: the Details link of its check). Its steps are `install` (the bundle), `install-operators` and `distributed-tracing-tests-opentelemetry-premerge`, and a step's directory is uploaded when that step ends (`/otel-openshift-ci`, `references/logs-and-artifacts.md`); until then the file is not found. `"passed": true` means the images built, the operators installed and the chainsaw tests have started: the build and the branch are fine, so trigger the rest. If `install` or `install-operators` failed (`"passed": false`; read that step's log with `get_prow_artifact_content` and `step`), or the job ended before them (an image build, `NoClusters`: `failed_steps` of `get_prow_job_run`), fix that before triggering the rest. Trigger the rest, every other job of the Step 2 list, on one line (`CONFIG` is the variable of Step 2):
+While it runs, read `artifacts/${FIRST}/install-operators/finished.json` of the run with `get_prow_artifact_content` (`run_url`: the Details link of its check). Its steps are `install` (the bundle), `install-operators` and `distributed-tracing-tests-opentelemetry-premerge`, and a step's directory is uploaded when that step ends (`/otel-openshift-ci`, `references/logs-and-artifacts.md`); until then the file is not found. `"passed": true` means the images built, the operators installed and the chainsaw tests have started: the build and the branch are fine, so trigger the rest. It does not prove that the Cluster Observability Operator, Loki and Logging install: only the jobs that list them in `OPERATORS` (the FIPS job) install them. If `install` or `install-operators` failed (`"passed": false`; read that step's log with `get_prow_artifact_content` and `step`), or the job ended before them (an image build, `NoClusters`: `failed_steps` of `get_prow_job_run`), fix that before triggering the rest. Trigger the rest, every other job of the Step 2 list, on one line. The block sets `FIRST` again, because the shell of the first block is gone by now, and posts nothing when `FIRST` or `REST` is empty; an empty `FIRST` would trigger the first job a second time and abort its run:
 
 ```bash
-REST=$(yq '.tests[] | select(.optional == true) | .as' "$CONFIG" | grep -v '^e2e-ocp-4-21$' | sed 's/^/art-build-/' | paste -sd' ' -)
-gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test ${REST}"
+FIRST=$(yq '.tests[] | select(.optional == true) | .as' "$CONFIG" | grep -E '^e2e-ocp-[0-9]+-[0-9]+$' | sort -t- -k3,3n -k4,4n | tail -1)
+REST=$(yq '.tests[] | select(.optional == true) | .as' "$CONFIG" | grep -vxF "${FIRST:?no plain e2e-ocp-<x>-<y> job in $CONFIG}" | sed 's/^/art-build-/' | paste -sd' ' -)
+gh pr comment {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --body "/test ${REST:?no other optional job in $CONFIG}"
 ```
 
 Behaviors to plan around:
@@ -76,7 +79,7 @@ Behaviors to plan around:
 - `/test all` does not run the optional jobs. `/retest` reruns only the failed always-run jobs.
 - `/test <name>` reruns one job; the others are not affected.
 - The arm64 job needs the multi-arch collector image ("Promoting the collector image" in [references/ci-job-layout.md](references/ci-job-layout.md)); a failure at the collector pods right after the collector branch changed is that, not the operator.
-- `NoClusters: No clusters in pool are ready to be claimed` means the hive pool is empty (the 4.12 pool holds one cluster at a time and starts cold); wait and rerun.
+- `NoClusters: No clusters in pool are ready to be claimed` means the hive pool is empty (the pool of the lowest version holds one cluster at a time and starts cold); wait and rerun.
 
 ### Step 4: Report
 

@@ -8,13 +8,13 @@
 
 ### Step 5: Collect the final job status
 
-Every job of the matrix must have a result, not only the ones that were triggered. The expected jobs are the optional tests of the config (Step 2 of the skill) plus the always-run `e2e-pre-merge`, which belongs in the table too. Compare that list with the statuses of the PR.
+Every job of the matrix must have a result, not only the ones that were triggered. The expected jobs are the optional tests of the config (Step 2 of the skill) plus the always-run `e2e-pre-merge` and `fips-check`, which belong in the table too. Compare that list with the statuses of the PR.
 
 **Statuses from GitHub.** Prow posts one status per job and commit, context `ci/prow/art-build-<test>`:
 ```bash
 gh pr view {PR_NUMBER} --repo openshift/open-telemetry-opentelemetry-operator --json headRefOid -q .headRefOid
 gh api repos/openshift/open-telemetry-opentelemetry-operator/commits/{SHA}/statuses --paginate \
-  --jq '.[] | select(.context|startswith("ci/prow/art-build-e2e-")) | "\(.state)\t\(.context)\t\(.target_url)"'
+  --jq '.[] | select((.context|startswith("ci/prow/art-build-e2e-")) or .context=="ci/prow/art-build-fips-check") | "\(.state)\t\(.context)\t\(.target_url)"'
 ```
 A context appears once per run, newest first; the first entry of each context is the result of its latest run (`success`, `failure`, `error`, `pending`). `pending` means testing is not finished; stop and say so. A job of the matrix with no status on the head commit was not run on that commit: look at the earlier commits of the PR (`gh pr view --json commits`) and report the newest run, and say on which commit it ran. A job with no status on any commit is **NOT RUN** in the table.
 
@@ -44,13 +44,13 @@ Final results of the e2e matrix jobs on this PR (statuses of commit `abc1234`, r
 
 | Job | Result | Runs | Run |
 | --- | --- | --- | --- |
-| `e2e-ocp-4-21` | ✅ PASS | 1 | [spyglass](https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/view/gs/qe-private-deck/pr-logs/pull/openshift_open-telemetry-opentelemetry-operator/350/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-0.158-art-build-e2e-ocp-4-21/2110463341993398272) |
+| `e2e-ocp-4-12` | ✅ PASS | 1 | [spyglass](https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/view/gs/qe-private-deck/pr-logs/pull/openshift_open-telemetry-opentelemetry-operator/350/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-0.158-art-build-e2e-ocp-4-12/2110463341993398272) |
 | `e2e-ocp-5-0` | ❌ FAIL | 3 (FAILURE, ABORTED earlier) | [spyglass](...) |
-| `e2e-ocp-4-23` | ⚪ NOT RUN | 0 | — |
+| `e2e-ocp-4-18-arm64` | ⚪ NOT RUN | 0 | — |
 
-Run history: the job history pages of the private deck, e.g. [e2e-ocp-4-21](https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/job-history/gs/qe-private-deck/pr-logs/directory/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-0.158-art-build-e2e-ocp-4-21)
+Run history: the job history pages of the private deck, e.g. [e2e-ocp-4-12](https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/job-history/gs/qe-private-deck/pr-logs/directory/pull-ci-openshift-open-telemetry-opentelemetry-operator-rhosdt-0.158-art-build-e2e-ocp-4-12)
 
-**6 passed, 1 failed, 1 not run.** Still failing: `e2e-ocp-5-0`. Not run: `e2e-ocp-4-23`.
+**5 passed, 1 failed, 1 not run.** Still failing: `e2e-ocp-5-0`. Not run: `e2e-ocp-4-18-arm64`.
 ```
 The first column is the test name (`art-build-` and the job prefix stripped). The `Run` link is the `target_url` of the latest status. The `Runs` column carries the earlier results in parentheses so a rerun history is visible without opening the link.
 

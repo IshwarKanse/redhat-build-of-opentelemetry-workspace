@@ -36,7 +36,7 @@ Do this before the matrix: an FBC that does not install or a failing upgrade is 
 
 ### 2.4 The pre-merge e2e matrix on a sample of the supported OpenShift versions
 
-`/otel-qe-ocp-ci-tests` with the version and the pull request of 2.1 (Step 1 of that skill says which pull request to use). It triggers the optional jobs of the `art-build` config in `openshift/release` with `/test` comments: the full chainsaw suite on each sampled OpenShift version (the tests table of `otel-qe-ocp-ci-tests/references/ci-job-layout.md` lists them; the Konflux integration tests cover the rest), the FIPS and arm64 variants, and the OpenTelemetry Collector dashboard test in the OpenShift console. Every job of the config must pass.
+`/otel-qe-ocp-ci-tests` with the version and the pull request of 2.1 (Step 1 of that skill says which pull request to use). It triggers the optional jobs of the `art-build` config in `openshift/release` with `/test` comments: the full chainsaw suite on the lowest and the newest supported OpenShift version, the FIPS and arm64 variants on versions in between, and the console dashboard test (the config lists them; the Konflux integration tests cover the rest). Every job of the config must pass.
 
 For a failing job follow Steps 3 and 4 of `/otel-qe-ocp-ci-tests` (qe-agent step first, rerun with `/test`; a new commit needs the optional jobs triggered again) and file a TRACING bug for an unexplained failure. When every job is green, the collection mode of `/otel-qe-ocp-ci-tests` posts the results table as a comment on the pull request.
 

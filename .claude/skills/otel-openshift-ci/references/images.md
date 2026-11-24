@@ -12,14 +12,11 @@ On an Apple Silicon Mac, `podman pull` takes the arm64 image of a multi-arch tag
 
 ## Promoted images
 
-Images CI keeps under a stable name: the Go builder images that jobs use as their build root (`ocp/builder:rhel-9-golang-*`), the images of an OpenShift release (`ocp/<version>:<component>`), and the images a postsubmit promoted. ART's builds of layered products such as the Red Hat build of OpenTelemetry are not in CI: an "ART image" of such a product in CI is one that CI built from the repository's ART Dockerfiles. (OpenShift itself differs: its nightly payloads are ART builds, see "OpenShift release payloads".) The collector's `rhosdt-<version>` postsubmit builds `Dockerfile.art` of the branch and promotes it as `ci/redhat-opentelemetry-collector:redhat-otel-collector` (`rhosdt-0.158`) or `ci/redhat-opentelemetry-collector:rhosdt-<version>` (the branches after it; a new branch's operator jobs read the previous branch's tag until they are switched, see `/otel-qe-prepare-ci`). The operator's `art-build` jobs build `Dockerfile.art` and `Dockerfile.ta.art` of the PR as pipeline images (see "Pipeline images").
+Images CI keeps under a stable name: the Go builder images that jobs use as their build root (`ocp/builder:rhel-9-golang-*`), the images of an OpenShift release (`ocp/<version>:<component>`), and the images a postsubmit promoted. ART's builds of layered products such as the Red Hat build of OpenTelemetry are not in CI: an "ART image" of such a product in CI is one that CI built from the repository's ART Dockerfiles. (OpenShift itself differs: its nightly payloads are ART builds, see "OpenShift release payloads".) The collector's `rhosdt-<version>` postsubmit builds `Dockerfile.art` of the branch and promotes it to a tag of its own (which tag, and how the operator jobs read it: [ci-job-layout.md](../../otel-qe-ocp-ci-tests/references/ci-job-layout.md), "Promoting the collector image"). The operator's `art-build` jobs build `Dockerfile.art` and `Dockerfile.ta.art` of the PR as pipeline images (see "Pipeline images").
 
 Promoted images are stored in QCI, `quay.io/openshift/ci`, which takes its own robot credentials and refuses anonymous reads; `quay-proxy.ci.openshift.org` serves the same repository to anyone with an app.ci token.
 
-1. Get an app.ci token: open https://oauth-openshift.apps.ci.l2s4.p1.openshiftapps.com/oauth/token/request, sign in with Red Hat SSO and run the `oc login` command it shows (SKILL.md, "Log in to app.ci", has the details). Then log in to quay-proxy with it:
-   ```bash
-   oc whoami -t | podman login -u "$(oc whoami)" --password-stdin quay-proxy.ci.openshift.org
-   ```
+1. Log in to app.ci and then to quay-proxy with the token (SKILL.md, "Log in to app.ci", has both commands).
 2. Write `<namespace>/<name>:<tag>` as the QCI tag `<namespace>_<name>_<tag>` and pull it (add `--platform linux/amd64` on an Apple Silicon Mac for the amd64 image). The Go builder image of the OpenShift 5.0 branch, `ocp/builder:rhel-9-golang-1.26-openshift-5.0`:
    ```bash
    podman pull quay-proxy.ci.openshift.org/openshift/ci:ocp_builder_rhel-9-golang-1.26-openshift-5.0

@@ -41,8 +41,8 @@ https://qe-private-deck-ci.apps.ci.l2s4.p1.openshiftapps.com/view/gs/qe-private-
 ```
 
 - `{org}_{repo}`: `openshift_open-telemetry-opentelemetry-operator`; `openshift_release` for a `/pj-rehearse` run on a release PR, where the job name carries the `rehearse-{release-pr}-` prefix.
-- `{job-name}`: the check `ci/prow/{name}` on a PR of branch `{branch}` is the job `pull-ci-{org}-{repo}-{branch}-{name}`, where `{name}` is `{variant}-{test}`, or just `{test}` in a config without a variant. The check `ci/prow/upstream-e2e-ocp-5-0` on `main` of the operator is `pull-ci-openshift-open-telemetry-opentelemetry-operator-main-upstream-e2e-ocp-5-0`; `ci/prow/art-build-e2e-ocp-4-21` on `rhosdt-0.158` is `...-rhosdt-0.158-art-build-e2e-ocp-4-21`. Postsubmits are `branch-ci-{org}-{repo}-{branch}-{name}`, periodics `periodic-ci-{org}-{repo}-{branch}-{name}`.
-- `{test}`: the `as:` field of the test in the ci-operator config (e.g. `e2e-ocp-4-21`); it is also the directory of the test under `artifacts/`.
+- `{job-name}`: the check `ci/prow/{name}` on a PR of branch `{branch}` is the job `pull-ci-{org}-{repo}-{branch}-{name}`, where `{name}` is `{variant}-{test}`, or just `{test}` in a config without a variant. The check `ci/prow/upstream-e2e-ocp-5-0` on `main` of the operator is `pull-ci-openshift-open-telemetry-opentelemetry-operator-main-upstream-e2e-ocp-5-0`; `ci/prow/art-build-e2e-ocp-5-0` on `rhosdt-0.158` is `...-rhosdt-0.158-art-build-e2e-ocp-5-0`. Postsubmits are `branch-ci-{org}-{repo}-{branch}-{name}`, periodics `periodic-ci-{org}-{repo}-{branch}-{name}`.
+- `{test}`: the `as:` field of the test in the ci-operator config (e.g. `e2e-ocp-5-0`); it is also the directory of the test under `artifacts/`.
 
 In a run's directory:
 - `build-log.txt`: the ci-operator log. It names the namespace and build cluster of the run (`Using namespace ...`), the images it used and built ([images.md](images.md)), and every step with its result.
