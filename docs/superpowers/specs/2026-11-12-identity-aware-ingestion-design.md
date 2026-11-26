@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-12
 **Ticket:** [OBSDA-1512](https://redhat.atlassian.net/browse/OBSDA-1512); related: [RHAIRFE-3630](https://redhat.atlassian.net/browse/RHAIRFE-3630) (RHOAI trace routing RFE), [RHAISTRAT-2925](https://redhat.atlassian.net/browse/RHAISTRAT-2925) (RHOAI strategy draft)
-**Status:** Research — documenting how the OTEL collector could support identity-aware auth and multi-tenant routing. No implementation yet.
+**Status:** Research — documenting how the OTEL collector could support identity-aware auth and multi-tenant routing. No implementation yet. **Superseded in part on 2026-11-26** by `2026-11-26-identity-aware-ingestion-k8s-auth-design.md`: a cluster test showed that the OIDC extension does validate service account tokens with a keys file, that the kube-rbac-proxy sidecar cannot forward the sender's token, and the extension is now written new as `k8s_auth` in a Red Hat repository. Where the two documents differ, the newer one wins.
 
 ## Summary
 

@@ -26,6 +26,7 @@ Lookup table: concern → repo(s) → spec file(s). Use this to find where to go
 | Non-repudiation signing (SDK + collector processor) | redhat-opentelemetry-collector | `what/signing.md` |
 | RHEL metering (bootstrap script + stock components) | redhat-opentelemetry-collector | `what/rhel-metering.md` |
 | OBI receiver (eBPF instrumentation) | redhat-opentelemetry-collector | `what/obi.md` |
+| Kubernetes auth extension `k8s_auth` (planned: TRACING-6994; proposed location: a Go module folder in the distro repo) | redhat-opentelemetry-collector | `what/identity-aware-ingestion.md` |
 
 ## Operator
 
@@ -70,6 +71,7 @@ These features span multiple repos:
 | Feature | Repos |
 |---|---|
 | Adding a new collector component | redhat-opentelemetry-collector, openshift-docs |
+| Identity-aware ingestion (`k8s_auth`, planned: TRACING-6994) | redhat-opentelemetry-collector (extension, manifest), opentelemetry-collector-contrib (donation, headers setter fix), opentelemetry-collector (HTTP status for auth errors), opentelemetry-operator (RBAC parser), openshift-docs, distributed-tracing-qe |
 | OBI receiver features & k8s-cache | redhat-opentelemetry-collector, opentelemetry-operator, open-telemetry-opentelemetry-operator (`bundle/`), ocp-build-data, konflux-release-data, openshift-docs |
 | New CRD or API field | opentelemetry-operator, open-telemetry-opentelemetry-operator (`bundle/`), openshift-docs |
 | Version bump (upstream rebase) | redhat-opentelemetry-collector, open-telemetry-opentelemetry-operator, ocp-build-data, konflux-release-data |

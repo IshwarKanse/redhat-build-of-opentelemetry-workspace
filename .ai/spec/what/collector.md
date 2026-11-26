@@ -156,6 +156,7 @@ The in-cluster (platform) and user workload monitoring (UWM) Prometheus instance
 | Component | Type | Support Level | Ticket |
 |---|---|---|---|
 | Signature Validation | Processor | **[PLANNED: TRACING-6499]** TP | Validates non-repudiation signatures on incoming spans. See `what/signing.md`. |
+| Kubernetes Auth (`k8s_auth`) | Extension | **[PLANNED: TRACING-6994]** TP | Authenticates senders with TokenReview and optionally authorizes them with SubjectAccessReview. Built in a Red Hat repository (proposed: a Go module folder in `redhat-opentelemetry-collector`); not in any upstream distribution, so it cannot be promoted to GA until contrib accepts it. See `what/identity-aware-ingestion.md`. |
 | Log Deduplication | Processor | **[PLANNED: TRACING-6697]** TP | Aggregates identical logs over a time interval. See `what/collector-3.12-components.md`. |
 | Syslog | Exporter | **[PLANNED: TRACING-6788]** TP | Exports logs via syslog protocol (RFC 5424/3164). See `what/collector-3.12-components.md`. |
 | Webhook Event | Receiver | **[PLANNED: TRACING-6641]** TP | Receives logs over HTTP webhooks. New in 3.12: it is not in any 3.11 build (`manifest.yaml`, release notes and docs have no entry). See `what/collector-3.12-components.md`. |
